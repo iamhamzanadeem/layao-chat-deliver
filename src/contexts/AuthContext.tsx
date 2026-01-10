@@ -6,18 +6,41 @@ interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  isDevMode: boolean;
   signInWithPhone: (phone: string) => Promise<{ error: Error | null }>;
   verifyOtp: (phone: string, token: string) => Promise<{ error: Error | null }>;
   signInWithGoogle: () => Promise<{ error: Error | null }>;
+  devLogin: () => void;
   signOut: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// Mock user for development testing
+const DEV_USER: User = {
+  id: 'dev-user-00000000-0000-0000-0000-000000000001',
+  email: 'dev@layao.test',
+  phone: '+923001234567',
+  app_metadata: {},
+  user_metadata: { full_name: 'Test User' },
+  aud: 'authenticated',
+  created_at: new Date().toISOString(),
+} as User;
+
+const DEV_SESSION: Session = {
+  access_token: 'dev-access-token',
+  refresh_token: 'dev-refresh-token',
+  expires_in: 3600,
+  expires_at: Math.floor(Date.now() / 1000) + 3600,
+  token_type: 'bearer',
+  user: DEV_USER,
+} as Session;
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isDevMode, setIsDevMode] = useState(false);
 
   useEffect(() => {
     // Set up auth state listener FIRST
@@ -77,7 +100,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const devLogin = () => {
+    setUser(DEV_USER);
+    setSession(DEV_SESSION);
+    setIsDevMode(true);
+    setLoading(false);
+  };
+
   const signOut = async () => {
+    if (isDevMode) {
+      setUser(null);
+      setSession(null);
+      setIsDevMode(false);
+      return;
+    }
     await supabase.auth.signOut();
     setUser(null);
     setSession(null);
@@ -89,9 +125,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         user,
         session,
         loading,
+        isDevMode,
         signInWithPhone,
         verifyOtp,
         signInWithGoogle,
+        devLogin,
         signOut,
       }}
     >

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Phone, Mail, ArrowRight, Loader2 } from 'lucide-react';
+import { Phone, Mail, ArrowRight, Loader2, FlaskConical } from 'lucide-react';
 import { z } from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -17,7 +17,7 @@ type AuthStep = 'phone' | 'otp' | 'google';
 const Auth = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { user, signInWithPhone, verifyOtp, signInWithGoogle } = useAuth();
+  const { user, signInWithPhone, verifyOtp, signInWithGoogle, devLogin } = useAuth();
   
   const [step, setStep] = useState<AuthStep>('phone');
   const [phone, setPhone] = useState('+92');
@@ -106,6 +106,11 @@ const Auth = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const handleDevLogin = () => {
+    devLogin();
+    navigate('/app/chat', { replace: true });
   };
 
   return (
@@ -223,6 +228,22 @@ const Auth = () => {
                       </svg>
                       Continue with Google
                     </Button>
+
+                    {/* Dev Login - For Testing Only */}
+                    <div className="mt-4 pt-4 border-t border-dashed border-border">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full h-12 border-amber-500/50 text-amber-600 hover:bg-amber-50 hover:text-amber-700"
+                        onClick={handleDevLogin}
+                      >
+                        <FlaskConical className="w-5 h-5 mr-2" />
+                        Dev Login (Testing Only)
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center mt-2">
+                        Skip authentication for development testing
+                      </p>
+                    </div>
                   </div>
                 </motion.div>
               )}
