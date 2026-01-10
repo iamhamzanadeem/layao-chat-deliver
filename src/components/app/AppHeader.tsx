@@ -1,7 +1,9 @@
-import { ArrowLeft, MoreVertical } from 'lucide-react';
+import { ArrowLeft, MoreVertical, FlaskConical } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface AppHeaderProps {
   title: string;
@@ -19,6 +21,7 @@ const AppHeader = ({
   className,
 }: AppHeaderProps) => {
   const navigate = useNavigate();
+  const { isDevMode } = useAuth();
 
   return (
     <header
@@ -42,6 +45,12 @@ const AppHeader = ({
         <h1 className="text-lg font-semibold text-foreground truncate">
           {title}
         </h1>
+        {isDevMode && (
+          <Badge variant="outline" className="ml-2 border-amber-500/50 text-amber-600 text-xs">
+            <FlaskConical className="w-3 h-3 mr-1" />
+            DEV
+          </Badge>
+        )}
       </div>
 
       <div className="flex items-center gap-2">
