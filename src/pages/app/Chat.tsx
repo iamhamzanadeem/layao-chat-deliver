@@ -110,8 +110,8 @@ const Chat = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
           >
-            {message.type === 'product_card' && message.metadata ? (
-              <ProductCard data={message.metadata as ProductCardData} />
+          {message.type === 'product_card' && message.metadata ? (
+              <ProductCard data={message.metadata as unknown as ProductCardData} />
             ) : (
               <ChatBubble
                 isFromUser={message.isFromUser}
