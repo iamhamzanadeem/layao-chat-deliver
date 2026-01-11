@@ -1,13 +1,15 @@
-import { useEffect } from 'react';
+import { useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrderProvider } from '@/contexts/OrderContext';
-import BottomNav from './BottomNav';
+import { AppSidebarDesktop } from './AppSidebar';
 import { Loader2 } from 'lucide-react';
+import { useEffect } from 'react';
 
 const AppLayout = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -32,14 +34,26 @@ const AppLayout = () => {
 
   return (
     <OrderProvider>
-      <div className="min-h-screen bg-background flex flex-col">
-        <main className="flex-1 pb-20 overflow-hidden">
-          <Outlet />
+      <div className="min-h-screen bg-background flex">
+        <AppSidebarDesktop 
+          selectedOrderId={selectedOrderId}
+          onSelectOrder={setSelectedOrderId}
+        />
+        <main className="flex-1 h-screen overflow-hidden">
+          <Outlet context={{ selectedOrderId, onSelectOrder: setSelectedOrderId }} />
         </main>
-        <BottomNav />
       </div>
     </OrderProvider>
   );
 };
 
 export default AppLayout;
+
+// Hook to access layout context
+export const useAppLayout = () => {
+  // This will be used by Chat component to access selectedOrderId
+  return {
+    selectedOrderId: null as string | null,
+    onSelectOrder: (_id: string | null) => {},
+  };
+};

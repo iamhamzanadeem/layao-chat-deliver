@@ -1,6 +1,5 @@
 import { Button } from '@/components/ui/button';
 import { ShoppingBag, RotateCcw, MapPin, HelpCircle } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 interface QuickActionsProps {
   onAction: (action: string) => void;
@@ -14,16 +13,6 @@ const quickActions = [
 ];
 
 const QuickActions = ({ onAction }: QuickActionsProps) => {
-  const navigate = useNavigate();
-
-  const handleClick = (actionId: string) => {
-    if (actionId === 'browse') {
-      navigate('/app/catalog');
-    } else {
-      onAction(actionId);
-    }
-  };
-
   return (
     <div className="flex flex-wrap gap-2 px-4 py-3 bg-muted/50 border-t border-border">
       {quickActions.map((action) => {
@@ -34,7 +23,7 @@ const QuickActions = ({ onAction }: QuickActionsProps) => {
             variant="secondary"
             size="sm"
             className="rounded-full h-8 px-3 gap-1.5 text-xs font-medium"
-            onClick={() => handleClick(action.id)}
+            onClick={() => onAction(action.id)}
           >
             <Icon className="w-3.5 h-3.5" />
             {action.label}

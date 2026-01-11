@@ -13,8 +13,6 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/app/Auth";
 import AppLayout from "./components/app/AppLayout";
 import Chat from "./pages/app/Chat";
-import Catalog from "./pages/app/Catalog";
-import Orders from "./pages/app/Orders";
 import Profile from "./pages/app/Profile";
 
 const queryClient = new QueryClient();
@@ -39,8 +37,6 @@ const App = () => (
             <Route path="/app" element={<AppLayout />}>
               <Route index element={<Navigate to="/app/chat" replace />} />
               <Route path="chat" element={<Chat />} />
-              <Route path="catalog" element={<Catalog />} />
-              <Route path="orders" element={<Orders />} />
               <Route path="profile" element={<Profile />} />
             </Route>
             
