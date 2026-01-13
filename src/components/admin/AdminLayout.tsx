@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, ReactNode } from 'react';
 import { Outlet } from 'react-router-dom';
 import { AdminAuthProvider } from '@/contexts/AdminAuthContext';
 import AdminGuard from './AdminGuard';
@@ -6,7 +6,11 @@ import AdminSidebar from './AdminSidebar';
 import AdminHeader from './AdminHeader';
 import { cn } from '@/lib/utils';
 
-const AdminLayoutContent = () => {
+interface AdminLayoutContentProps {
+  children?: ReactNode;
+}
+
+const AdminLayoutContent = ({ children }: AdminLayoutContentProps) => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const toggleSidebar = () => {
@@ -27,18 +31,22 @@ const AdminLayoutContent = () => {
         )}
       >
         <div className="p-6">
-          <Outlet />
+          {children || <Outlet />}
         </div>
       </main>
     </div>
   );
 };
 
-const AdminLayout = () => {
+interface AdminLayoutProps {
+  children?: ReactNode;
+}
+
+const AdminLayout = ({ children }: AdminLayoutProps) => {
   return (
     <AdminAuthProvider>
       <AdminGuard>
-        <AdminLayoutContent />
+        <AdminLayoutContent>{children}</AdminLayoutContent>
       </AdminGuard>
     </AdminAuthProvider>
   );

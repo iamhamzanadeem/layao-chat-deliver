@@ -9,7 +9,7 @@ import {
   Star,
   ChevronRight
 } from 'lucide-react';
-import AdminLayout from '@/components/admin/AdminLayout';
+
 import { Input } from '@/components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -295,7 +295,7 @@ const Customers = () => {
   const { data: customers, isLoading } = useCustomers({ search });
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Customers</h1>
@@ -346,7 +346,7 @@ const Customers = () => {
         open={!!selectedCustomerId}
         onOpenChange={(open) => !open && setSelectedCustomerId(null)}
       />
-    </AdminLayout>
+    </>
   );
 };
 

@@ -7,6 +7,15 @@ import { useToast } from '@/hooks/use-toast';
 type Order = Tables<'orders'>;
 type OrderStatus = Enums<'order_status'>;
 
+interface OrderWithProfile extends Order {
+  profile?: {
+    full_name: string | null;
+    phone: string | null;
+    avatar_url?: string | null;
+  };
+  order_items?: Tables<'order_items'>[];
+}
+
 interface UseOrdersOptions {
   status?: OrderStatus | 'all';
 }
@@ -20,20 +29,39 @@ export const useOrders = (options: UseOrdersOptions = {}) => {
     queryFn: async () => {
       let q = supabase
         .from('orders')
-        .select(`
-          *,
-          profiles(full_name, phone)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (status !== 'all') {
         q = q.eq('status', status);
       }
 
-      const { data, error } = await q;
+      const { data: orders, error } = await q;
 
       if (error) throw error;
-      return data;
+      if (!orders || orders.length === 0) return [];
+
+      // Get unique user IDs
+      const userIds = [...new Set(orders.map((o) => o.user_id))];
+
+      // Fetch profiles for these users
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone')
+        .in('id', userIds);
+
+      // Create a map of user_id -> profile
+      const profileMap = new Map(
+        (profiles || []).map((p) => [p.id, p])
+      );
+
+      // Attach profiles to orders
+      const ordersWithProfiles: OrderWithProfile[] = orders.map((order) => ({
+        ...order,
+        profile: profileMap.get(order.user_id) || null,
+      }));
+
+      return ordersWithProfiles;
     },
   });
 
@@ -65,21 +93,30 @@ export const useOrders = (options: UseOrdersOptions = {}) => {
 export const useOrder = (id: string | undefined) => {
   return useQuery({
     queryKey: ['admin-order', id],
-    queryFn: async () => {
+    queryFn: async (): Promise<OrderWithProfile | null> => {
       if (!id) return null;
 
-      const { data, error } = await supabase
+      // Fetch order with items
+      const { data: order, error } = await supabase
         .from('orders')
-        .select(`
-          *,
-          profiles(full_name, phone, avatar_url),
-          order_items(*)
-        `)
+        .select('*, order_items(*)')
         .eq('id', id)
         .single();
 
       if (error) throw error;
-      return data;
+      if (!order) return null;
+
+      // Fetch profile for this user
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('id, full_name, phone, avatar_url')
+        .eq('id', order.user_id)
+        .single();
+
+      return {
+        ...order,
+        profile: profile || null,
+      };
     },
     enabled: !!id,
   });

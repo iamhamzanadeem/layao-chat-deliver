@@ -10,9 +10,14 @@ import ProductResults from '@/components/app/chat/ProductResults';
 import CategorySelector from '@/components/app/chat/CategorySelector';
 import ProductGrid from '@/components/app/chat/ProductGrid';
 import CartSheet from '@/components/app/chat/CartSheet';
-import { useOrder } from '@/contexts/OrderContext';
+import DeliveryTypeSelector from '@/components/app/chat/DeliveryTypeSelector';
+import AddressSelector from '@/components/app/chat/AddressSelector';
+import OrderConfirmation from '@/components/app/chat/OrderConfirmation';
+import OrderPlaced from '@/components/app/chat/OrderPlaced';
+import { useOrder, type DeliveryType, type DeliveryAddress } from '@/contexts/OrderContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useProductSearch } from '@/hooks/app/useProductSearch';
+import { useCreateOrder } from '@/hooks/app/useCreateOrder';
 import type { ChatMessage, ProductCardData } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { AppSidebarMobile } from '@/components/app/AppSidebar';
@@ -22,11 +27,24 @@ interface AppLayoutContext {
   onSelectOrder: (orderId: string | null) => void;
 }
 
+type CheckoutStep = 'idle' | 'delivery_type' | 'address' | 'confirmation';
+
 const Chat = () => {
   const { selectedOrderId, onSelectOrder } = useOutletContext<AppLayoutContext>();
   const { user } = useAuth();
-  const { itemCount, total } = useOrder();
+  const { 
+    items, 
+    itemCount, 
+    total, 
+    subtotal,
+    deliveryFee,
+    deliveryType,
+    deliveryAddress,
+    setDeliveryType,
+    setDeliveryAddress 
+  } = useOrder();
   const { searchByMessage } = useProductSearch();
+  const createOrder = useCreateOrder();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -43,6 +61,9 @@ const Chat = () => {
   const [isBrowsing, setIsBrowsing] = useState(false);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
+  
+  // Checkout flow state
+  const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('idle');
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -56,9 +77,21 @@ const Chat = () => {
   useEffect(() => {
     if (selectedOrderId) {
       setIsBrowsing(false);
-      // TODO: Load order messages
+      setCheckoutStep('idle');
     }
   }, [selectedOrderId]);
+
+  const addBotMessage = (content: string, type: ChatMessage['type'] = 'bot') => {
+    const message: ChatMessage = {
+      id: crypto.randomUUID(),
+      type,
+      content,
+      isFromUser: false,
+      createdAt: new Date(),
+    };
+    setMessages((prev) => [...prev, message]);
+    return message;
+  };
 
   const handleSendMessage = async (content: string) => {
     const userMessage: ChatMessage = {
@@ -87,25 +120,11 @@ const Chat = () => {
       setMessages((prev) => [...prev, productResultsMessage]);
     } else if (searchResult.keywords.length > 0) {
       // Had keywords but no matches - suggest browsing
-      const noMatchMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        type: 'bot',
-        content: `I couldn't find "${searchResult.keywords.join(', ')}" in our inventory. Try browsing our menu to see what's available! 🔍`,
-        isFromUser: false,
-        createdAt: new Date(),
-      };
-      setMessages((prev) => [...prev, noMatchMessage]);
+      addBotMessage(`I couldn't find "${searchResult.keywords.join(', ')}" in our inventory. Try browsing our menu to see what's available! 🔍`);
       setIsBrowsing(true);
     } else {
       // No product keywords detected - generic response
-      const botMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        type: 'bot',
-        content: "Got it! Tap 'Browse Menu' below to see our products, or tell me what you'd like to order! 🛒",
-        isFromUser: false,
-        createdAt: new Date(),
-      };
-      setMessages((prev) => [...prev, botMessage]);
+      addBotMessage("Got it! Tap 'Browse Menu' below to see our products, or tell me what you'd like to order! 🛒");
     }
   };
 
@@ -114,39 +133,114 @@ const Chat = () => {
       setIsBrowsing(true);
       setSelectedCategoryId(null);
     } else if (action === 'help') {
-      const helpMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        type: 'bot',
-        content: "Need help? You can:\n• Browse Menu - see all products\n• Type what you want\n• Send a photo of items\n• Call us: 0300-1234567",
-        isFromUser: false,
-        createdAt: new Date(),
-      };
-      setMessages((prev) => [...prev, helpMessage]);
+      addBotMessage("Need help? You can:\n• Browse Menu - see all products\n• Type what you want\n• Send a photo of items\n• Call us: 0300-1234567");
     } else if (action === 'track') {
-      // Show orders in sidebar
-      const trackMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        type: 'bot',
-        content: "You can see all your orders in the sidebar on the left. Tap the menu icon to open it! 📋",
-        isFromUser: false,
-        createdAt: new Date(),
-      };
-      setMessages((prev) => [...prev, trackMessage]);
+      addBotMessage("You can see all your orders in the sidebar on the left. Tap the menu icon to open it! 📋");
     } else if (action === 'reorder') {
-      const reorderMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        type: 'bot',
-        content: "Select a previous order from the sidebar to view and reorder items! ↩️",
-        isFromUser: false,
-        createdAt: new Date(),
-      };
-      setMessages((prev) => [...prev, reorderMessage]);
+      addBotMessage("Select a previous order from the sidebar to view and reorder items! ↩️");
     }
   };
 
   const closeBrowseMode = () => {
     setIsBrowsing(false);
     setSelectedCategoryId(null);
+  };
+
+  // Checkout flow handlers
+  const startCheckout = () => {
+    setCartOpen(false);
+    setCheckoutStep('delivery_type');
+    addBotMessage("Let's complete your order! First, choose your delivery speed:", 'delivery_type_select');
+  };
+
+  const handleDeliveryTypeSelect = (type: DeliveryType) => {
+    setDeliveryType(type);
+    const typeName = type === 'instant' ? 'Instant Delivery (Rs. 100)' : 'Flexible Delivery (Rs. 50)';
+    
+    // Add user selection message
+    const selectionMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      type: 'text',
+      content: typeName,
+      isFromUser: true,
+      createdAt: new Date(),
+    };
+    setMessages((prev) => [...prev, selectionMessage]);
+    
+    setCheckoutStep('address');
+    addBotMessage("Great choice! Now, where should we deliver?", 'address_select');
+  };
+
+  const handleAddressSelect = (address: DeliveryAddress) => {
+    setDeliveryAddress(address);
+    
+    // Add user selection message
+    const selectionMessage: ChatMessage = {
+      id: crypto.randomUUID(),
+      type: 'text',
+      content: `📍 ${address.label}: ${address.fullAddress}`,
+      isFromUser: true,
+      createdAt: new Date(),
+    };
+    setMessages((prev) => [...prev, selectionMessage]);
+    
+    setCheckoutStep('confirmation');
+    addBotMessage("Please review and confirm your order:", 'order_confirmation');
+  };
+
+  const handleConfirmOrder = async () => {
+    if (!deliveryAddress) return;
+
+    try {
+      const result = await createOrder.mutateAsync({
+        items,
+        deliveryType,
+        deliveryAddress,
+        subtotal,
+        deliveryFee,
+        total,
+      });
+
+      setCheckoutStep('idle');
+      
+      // Add order placed message
+      const orderPlacedMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        type: 'order_placed',
+        content: result.orderNumber,
+        isFromUser: false,
+        createdAt: new Date(),
+        metadata: { deliveryType },
+      };
+      setMessages((prev) => [...prev, orderPlacedMessage]);
+    } catch (error) {
+      // Error handled by mutation
+    }
+  };
+
+  const handleEditCart = () => {
+    setCheckoutStep('idle');
+    setCartOpen(true);
+  };
+
+  // Render checkout step components
+  const renderCheckoutStep = () => {
+    switch (checkoutStep) {
+      case 'delivery_type':
+        return <DeliveryTypeSelector onSelect={handleDeliveryTypeSelect} />;
+      case 'address':
+        return <AddressSelector onSelect={handleAddressSelect} />;
+      case 'confirmation':
+        return (
+          <OrderConfirmation 
+            onConfirm={handleConfirmOrder} 
+            onEdit={handleEditCart}
+            isLoading={createOrder.isPending}
+          />
+        );
+      default:
+        return null;
+    }
   };
 
   return (
@@ -164,7 +258,7 @@ const Chat = () => {
           </div>
         </div>
         
-        {itemCount > 0 && (
+        {itemCount > 0 && checkoutStep === 'idle' && (
           <Button
             size="sm"
             className="gap-2"
@@ -233,6 +327,11 @@ const Chat = () => {
                 products={message.products} 
                 keywords={message.keywords || []} 
               />
+            ) : message.type === 'order_placed' ? (
+              <OrderPlaced 
+                orderNumber={message.content} 
+                deliveryType={(message.metadata?.deliveryType as DeliveryType) || 'flexible'} 
+              />
             ) : (
               <ChatBubble
                 isFromUser={message.isFromUser}
@@ -243,17 +342,33 @@ const Chat = () => {
             )}
           </motion.div>
         ))}
+        
+        {/* Checkout step component */}
+        {checkoutStep !== 'idle' && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-2"
+          >
+            {renderCheckoutStep()}
+          </motion.div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Quick Actions */}
-      <QuickActions onAction={handleQuickAction} />
+      {/* Quick Actions - hide during checkout */}
+      {checkoutStep === 'idle' && <QuickActions onAction={handleQuickAction} />}
 
-      {/* Input */}
-      <ChatInput onSendMessage={handleSendMessage} />
+      {/* Input - hide during checkout */}
+      {checkoutStep === 'idle' && <ChatInput onSendMessage={handleSendMessage} />}
 
       {/* Cart Sheet */}
-      <CartSheet open={cartOpen} onOpenChange={setCartOpen} />
+      <CartSheet 
+        open={cartOpen} 
+        onOpenChange={setCartOpen} 
+        onCheckout={startCheckout}
+      />
     </div>
   );
 };

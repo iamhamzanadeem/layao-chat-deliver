@@ -14,6 +14,14 @@ import Auth from "./pages/app/Auth";
 import AppLayout from "./components/app/AppLayout";
 import Chat from "./pages/app/Chat";
 import Profile from "./pages/app/Profile";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminAuth from "./pages/admin/Auth";
+import Dashboard from "./pages/admin/Dashboard";
+import Products from "./pages/admin/Products";
+import Categories from "./pages/admin/Categories";
+import Orders from "./pages/admin/Orders";
+import Customers from "./pages/admin/Customers";
+import Analytics from "./pages/admin/Analytics";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +46,18 @@ const App = () => (
               <Route index element={<Navigate to="/app/chat" replace />} />
               <Route path="chat" element={<Chat />} />
               <Route path="profile" element={<Profile />} />
+            </Route>
+            
+            {/* Admin Routes */}
+            <Route path="/admin/auth" element={<AdminAuth />} />
+            <Route path="/admin" element={<AdminLayout />}>
+              <Route index element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="dashboard" element={<Dashboard />} />
+              <Route path="products" element={<Products />} />
+              <Route path="categories" element={<Categories />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="customers" element={<Customers />} />
+              <Route path="analytics" element={<Analytics />} />
             </Route>
             
             <Route path="*" element={<NotFound />} />

@@ -1,20 +1,20 @@
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
 import { useOrder } from '@/contexts/OrderContext';
-import { useNavigate } from 'react-router-dom';
 
 interface CartSheetProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onCheckout?: () => void;
 }
 
-const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
-  const navigate = useNavigate();
-  const { items, updateQuantity, itemCount, subtotal, deliveryFee, total } = useOrder();
+const CartSheet = ({ open, onOpenChange, onCheckout }: CartSheetProps) => {
+  const { items, updateQuantity, itemCount, subtotal, deliveryFee, total, deliveryType } = useOrder();
 
   const handleCheckout = () => {
-    onOpenChange(false);
-    // TODO: Implement checkout flow in chat
+    if (onCheckout) {
+      onCheckout();
+    }
   };
 
   return (
@@ -65,8 +65,8 @@ const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
                   <span>Subtotal</span>
                   <span>Rs. {subtotal}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span>Delivery</span>
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>Delivery ({deliveryType === 'instant' ? 'Instant' : 'Flexible'})</span>
                   <span>Rs. {deliveryFee}</span>
                 </div>
                 <div className="flex justify-between font-semibold">
@@ -75,8 +75,8 @@ const CartSheet = ({ open, onOpenChange }: CartSheetProps) => {
                 </div>
               </div>
               
-              <Button className="w-full" onClick={handleCheckout}>
-                Checkout
+              <Button className="w-full bg-gradient-primary" onClick={handleCheckout}>
+                Proceed to Checkout
               </Button>
             </>
           )}
