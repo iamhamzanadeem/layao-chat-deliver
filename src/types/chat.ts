@@ -1,4 +1,8 @@
-export type MessageType = 'text' | 'image' | 'voice' | 'product_card' | 'order_summary' | 'status_update' | 'bot';
+import type { Tables } from '@/integrations/supabase/types';
+
+export type Product = Tables<'products'>;
+
+export type MessageType = 'text' | 'image' | 'voice' | 'product_card' | 'order_summary' | 'status_update' | 'bot' | 'product_results' | 'category_prompt';
 
 export interface ChatMessage {
   id: string;
@@ -8,6 +12,9 @@ export interface ChatMessage {
   isFromUser: boolean;
   createdAt: Date;
   orderId?: string;
+  // For product_results type
+  products?: Product[];
+  keywords?: string[];
 }
 
 export interface ProductCardData {
