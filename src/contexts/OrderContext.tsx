@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useCallback } from 'react';
 
+export type DeliveryType = 'instant' | 'flexible';
+
 export interface CartItem {
   id: string;
   productId: string;
@@ -18,14 +20,22 @@ export interface DeliveryAddress {
   landmark?: string;
 }
 
+// Delivery fee pricing
+const DELIVERY_FEES: Record<DeliveryType, number> = {
+  instant: 100,  // Rs. 100 for instant delivery (30-45 min)
+  flexible: 50,  // Rs. 50 for flexible delivery (batched, anytime today)
+};
+
 interface OrderContextType {
   items: CartItem[];
   deliveryAddress: DeliveryAddress | null;
+  deliveryType: DeliveryType;
   notes: string;
   addItem: (item: Omit<CartItem, 'id'>) => void;
   removeItem: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   setDeliveryAddress: (address: DeliveryAddress | null) => void;
+  setDeliveryType: (type: DeliveryType) => void;
   setNotes: (notes: string) => void;
   clearCart: () => void;
   subtotal: number;
@@ -36,11 +46,10 @@ interface OrderContextType {
 
 const OrderContext = createContext<OrderContextType | undefined>(undefined);
 
-const DELIVERY_FEE = 50; // PKR
-
 export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [items, setItems] = useState<CartItem[]>([]);
   const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress | null>(null);
+  const [deliveryType, setDeliveryType] = useState<DeliveryType>('flexible');
   const [notes, setNotes] = useState('');
 
   const addItem = useCallback((item: Omit<CartItem, 'id'>) => {
@@ -72,11 +81,12 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const clearCart = useCallback(() => {
     setItems([]);
     setDeliveryAddress(null);
+    setDeliveryType('flexible');
     setNotes('');
   }, []);
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const deliveryFee = items.length > 0 ? DELIVERY_FEE : 0;
+  const deliveryFee = items.length > 0 ? DELIVERY_FEES[deliveryType] : 0;
   const total = subtotal + deliveryFee;
   const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -85,11 +95,13 @@ export const OrderProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       value={{
         items,
         deliveryAddress,
+        deliveryType,
         notes,
         addItem,
         removeItem,
         updateQuantity,
         setDeliveryAddress,
+        setDeliveryType,
         setNotes,
         clearCart,
         subtotal,

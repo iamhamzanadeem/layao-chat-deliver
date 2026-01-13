@@ -1,9 +1,12 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { MessageCircle, ArrowRight, Sparkles } from 'lucide-react';
+import { MessageCircle, ArrowRight, Sparkles, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 export const HeroSection = () => {
+  const { canInstall, promptInstall, isInstalled } = usePWAInstall();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
       {/* Background Elements */}
@@ -63,6 +66,19 @@ export const HeroSection = () => {
                 <ArrowRight className="w-5 h-5" />
               </Link>
             </Button>
+            
+            {canInstall && !isInstalled && (
+              <Button 
+                size="lg" 
+                variant="outline" 
+                className="text-lg px-8 h-14 w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                onClick={promptInstall}
+              >
+                <Download className="w-5 h-5 mr-2" />
+                Install App
+              </Button>
+            )}
+            
             <Button asChild variant="outline" size="lg" className="text-lg px-8 h-14 w-full sm:w-auto">
               <Link to="/how-it-works">
                 See How It Works
