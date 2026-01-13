@@ -191,6 +191,7 @@ export type Database = {
           delivered_at: string | null
           delivery_address: Json
           delivery_fee: number
+          delivery_type: string
           id: string
           notes: string | null
           order_number: string
@@ -205,6 +206,7 @@ export type Database = {
           delivered_at?: string | null
           delivery_address: Json
           delivery_fee?: number
+          delivery_type?: string
           id?: string
           notes?: string | null
           order_number: string
@@ -219,6 +221,7 @@ export type Database = {
           delivered_at?: string | null
           delivery_address?: Json
           delivery_fee?: number
+          delivery_type?: string
           id?: string
           notes?: string | null
           order_number?: string

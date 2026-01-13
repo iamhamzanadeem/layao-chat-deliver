@@ -2,7 +2,20 @@ import type { Tables } from '@/integrations/supabase/types';
 
 export type Product = Tables<'products'>;
 
-export type MessageType = 'text' | 'image' | 'voice' | 'product_card' | 'order_summary' | 'status_update' | 'bot' | 'product_results' | 'category_prompt';
+export type MessageType = 
+  | 'text' 
+  | 'image' 
+  | 'voice' 
+  | 'product_card' 
+  | 'order_summary' 
+  | 'status_update' 
+  | 'bot' 
+  | 'product_results' 
+  | 'category_prompt'
+  | 'delivery_type_select'
+  | 'address_select'
+  | 'order_confirmation'
+  | 'order_placed';
 
 export interface ChatMessage {
   id: string;
