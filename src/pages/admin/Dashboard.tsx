@@ -136,7 +136,7 @@ const Dashboard = () => {
                   <div className="space-y-1">
                     <p className="font-medium">{order.order_number}</p>
                     <p className="text-sm text-muted-foreground">
-                      {(order.profiles as any)?.full_name || 'Customer'} •{' '}
+                      {order.profile?.full_name || 'Customer'} •{' '}
                       {formatDistanceToNow(new Date(order.created_at), {
                         addSuffix: true,
                       })}

@@ -13,7 +13,7 @@ import {
   Search,
   Filter
 } from 'lucide-react';
-import AdminLayout from '@/components/admin/AdminLayout';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -75,7 +75,7 @@ const OrderCard = ({
             )}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            {order.profiles?.full_name || 'Customer'}
+            {order.profile?.full_name || 'Customer'}
           </p>
         </div>
         <Badge className={cn('text-white', config.color)}>
@@ -175,11 +175,11 @@ const OrderDetail = ({
             <div className="bg-muted/50 rounded-lg p-3">
               <h4 className="font-medium text-sm mb-2">Customer</h4>
               <div className="space-y-1 text-sm">
-                <p className="text-foreground">{order.profiles?.full_name || 'Unknown'}</p>
-                {order.profiles?.phone && (
+                <p className="text-foreground">{order.profile?.full_name || 'Unknown'}</p>
+                {order.profile?.phone && (
                   <div className="flex items-center gap-2 text-muted-foreground">
                     <Phone className="w-4 h-4" />
-                    {order.profiles.phone}
+                    {order.profile.phone}
                   </div>
                 )}
               </div>
@@ -270,13 +270,13 @@ const Orders = () => {
     const searchLower = search.toLowerCase();
     return (
       order.order_number.toLowerCase().includes(searchLower) ||
-      order.profiles?.full_name?.toLowerCase().includes(searchLower) ||
-      order.profiles?.phone?.includes(search)
+      order.profile?.full_name?.toLowerCase().includes(searchLower) ||
+      order.profile?.phone?.includes(search)
     );
   });
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold text-foreground">Orders</h1>
@@ -340,7 +340,7 @@ const Orders = () => {
         open={!!selectedOrderId}
         onOpenChange={(open) => !open && setSelectedOrderId(null)}
       />
-    </AdminLayout>
+    </>
   );
 };
 
