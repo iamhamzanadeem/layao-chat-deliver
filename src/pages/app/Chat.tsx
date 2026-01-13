@@ -6,11 +6,13 @@ import ChatBubble from '@/components/app/chat/ChatBubble';
 import ChatInput from '@/components/app/chat/ChatInput';
 import QuickActions from '@/components/app/chat/QuickActions';
 import ProductCard from '@/components/app/chat/ProductCard';
+import ProductResults from '@/components/app/chat/ProductResults';
 import CategorySelector from '@/components/app/chat/CategorySelector';
 import ProductGrid from '@/components/app/chat/ProductGrid';
 import CartSheet from '@/components/app/chat/CartSheet';
 import { useOrder } from '@/contexts/OrderContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useProductSearch } from '@/hooks/app/useProductSearch';
 import type { ChatMessage, ProductCardData } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { AppSidebarMobile } from '@/components/app/AppSidebar';
@@ -24,6 +26,7 @@ const Chat = () => {
   const { selectedOrderId, onSelectOrder } = useOutletContext<AppLayoutContext>();
   const { user } = useAuth();
   const { itemCount, total } = useOrder();
+  const { searchByMessage } = useProductSearch();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -57,7 +60,7 @@ const Chat = () => {
     }
   }, [selectedOrderId]);
 
-  const handleSendMessage = (content: string) => {
+  const handleSendMessage = async (content: string) => {
     const userMessage: ChatMessage = {
       id: crypto.randomUUID(),
       type: 'text',
@@ -67,17 +70,43 @@ const Chat = () => {
     };
     setMessages((prev) => [...prev, userMessage]);
 
-    // Simulate bot response
-    setTimeout(() => {
+    // Search for products based on the message
+    const searchResult = await searchByMessage(content);
+
+    if (searchResult.hasResults) {
+      // Found matching products - display them inline
+      const productResultsMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        type: 'product_results',
+        content: '',
+        isFromUser: false,
+        createdAt: new Date(),
+        products: searchResult.products,
+        keywords: searchResult.keywords,
+      };
+      setMessages((prev) => [...prev, productResultsMessage]);
+    } else if (searchResult.keywords.length > 0) {
+      // Had keywords but no matches - suggest browsing
+      const noMatchMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        type: 'bot',
+        content: `I couldn't find "${searchResult.keywords.join(', ')}" in our inventory. Try browsing our menu to see what's available! 🔍`,
+        isFromUser: false,
+        createdAt: new Date(),
+      };
+      setMessages((prev) => [...prev, noMatchMessage]);
+      setIsBrowsing(true);
+    } else {
+      // No product keywords detected - generic response
       const botMessage: ChatMessage = {
         id: crypto.randomUUID(),
         type: 'bot',
-        content: "Got it! Tap 'Browse Menu' below to see our products, or just tell me what you need! 🛒",
+        content: "Got it! Tap 'Browse Menu' below to see our products, or tell me what you'd like to order! 🛒",
         isFromUser: false,
         createdAt: new Date(),
       };
       setMessages((prev) => [...prev, botMessage]);
-    }, 1000);
+    }
   };
 
   const handleQuickAction = (action: string) => {
@@ -195,9 +224,15 @@ const Chat = () => {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
+            className={message.isFromUser ? 'flex justify-end' : ''}
           >
             {message.type === 'product_card' && message.metadata ? (
               <ProductCard data={message.metadata as unknown as ProductCardData} />
+            ) : message.type === 'product_results' && message.products ? (
+              <ProductResults 
+                products={message.products} 
+                keywords={message.keywords || []} 
+              />
             ) : (
               <ChatBubble
                 isFromUser={message.isFromUser}
