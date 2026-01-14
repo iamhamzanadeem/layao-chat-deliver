@@ -19,3 +19,29 @@ export const useCategories = () => {
     },
   });
 };
+
+/**
+ * Get subcategories for a given parent
+ */
+export const useSubcategories = (parentId: string | null) => {
+  return useQuery({
+    queryKey: ['categories', 'children', parentId],
+    queryFn: async (): Promise<Category[]> => {
+      const query = supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (parentId) {
+        query.eq('parent_id', parentId);
+      } else {
+        query.is('parent_id', null);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return data || [];
+    },
+  });
+};

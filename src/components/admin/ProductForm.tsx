@@ -2,11 +2,12 @@ import { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Upload, X } from 'lucide-react';
+import { Loader2, Upload, X, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   Form,
   FormControl,
@@ -32,6 +33,7 @@ import { useCategories } from '@/hooks/admin/useCategories';
 import { Tables } from '@/integrations/supabase/types';
 
 type Product = Tables<'products'>;
+type Category = Tables<'categories'>;
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required'),
@@ -51,12 +53,35 @@ interface ProductFormProps {
   onCancel: () => void;
 }
 
+/**
+ * Builds a hierarchical category list with indentation
+ */
+function buildCategoryTree(categories: Category[]): { category: Category; level: number }[] {
+  const result: { category: Category; level: number }[] = [];
+  
+  const addChildren = (parentId: string | null, level: number) => {
+    const children = categories.filter(c => c.parent_id === parentId);
+    children.forEach(child => {
+      result.push({ category: child, level });
+      addChildren(child.id, level + 1);
+    });
+  };
+  
+  addChildren(null, 0);
+  return result;
+}
+
 const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
   const [imageUrl, setImageUrl] = useState<string | null>(product?.image_url || null);
   const [uploading, setUploading] = useState(false);
+  const [searchKeywords, setSearchKeywords] = useState<string[]>(
+    (product?.search_keywords as string[] | null) || []
+  );
+  const [keywordInput, setKeywordInput] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const { data: categories } = useCategories();
+  const { data: categories = [] } = useCategories();
+  const categoryTree = buildCategoryTree(categories);
   const createProduct = useCreateProduct();
   const updateProduct = useUpdateProduct();
   const uploadImage = useUploadProductImage();
@@ -96,6 +121,25 @@ const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
     }
   };
 
+  const handleAddKeyword = () => {
+    const trimmed = keywordInput.trim().toLowerCase();
+    if (trimmed && !searchKeywords.includes(trimmed)) {
+      setSearchKeywords([...searchKeywords, trimmed]);
+    }
+    setKeywordInput('');
+  };
+
+  const handleRemoveKeyword = (keyword: string) => {
+    setSearchKeywords(searchKeywords.filter(k => k !== keyword));
+  };
+
+  const handleKeywordKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      handleAddKeyword();
+    }
+  };
+
   const onSubmit = async (values: FormValues) => {
     const productData = {
       name: values.name,
@@ -106,6 +150,7 @@ const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
       stock_status: values.stock_status,
       image_url: imageUrl,
       category_id: values.category_id || null,
+      search_keywords: searchKeywords,
     };
 
     if (product) {
@@ -235,6 +280,14 @@ const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
                     <SelectItem value="liter">Liter</SelectItem>
                     <SelectItem value="dozen">Dozen</SelectItem>
                     <SelectItem value="pack">Pack</SelectItem>
+                    <SelectItem value="bottle">Bottle</SelectItem>
+                    <SelectItem value="jar">Jar</SelectItem>
+                    <SelectItem value="box">Box</SelectItem>
+                    <SelectItem value="bunch">Bunch</SelectItem>
+                    <SelectItem value="can">Can</SelectItem>
+                    <SelectItem value="cup">Cup</SelectItem>
+                    <SelectItem value="tub">Tub</SelectItem>
+                    <SelectItem value="tube">Tube</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -243,7 +296,7 @@ const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
           />
         </div>
 
-        {/* Category */}
+        {/* Category with hierarchy */}
         <FormField
           control={form.control}
           name="category_id"
@@ -257,9 +310,11 @@ const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  {categories?.map((cat) => (
+                  {categoryTree.map(({ category: cat, level }) => (
                     <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
+                      <span style={{ paddingLeft: `${level * 16}px` }}>
+                        {cat.icon} {cat.name}
+                      </span>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -268,6 +323,42 @@ const ProductForm = ({ product, onSuccess, onCancel }: ProductFormProps) => {
             </FormItem>
           )}
         />
+
+        {/* Search Keywords */}
+        <div className="space-y-2">
+          <FormLabel>Search Keywords</FormLabel>
+          <FormDescription>
+            Add alternate names, spellings, or local terms for better search (e.g., "anda" for eggs)
+          </FormDescription>
+          <div className="flex gap-2">
+            <Input
+              placeholder="Add keyword..."
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+              onKeyDown={handleKeywordKeyDown}
+              className="flex-1"
+            />
+            <Button type="button" size="icon" onClick={handleAddKeyword}>
+              <Plus className="h-4 w-4" />
+            </Button>
+          </div>
+          {searchKeywords.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {searchKeywords.map((keyword) => (
+                <Badge key={keyword} variant="secondary" className="gap-1">
+                  {keyword}
+                  <button
+                    type="button"
+                    onClick={() => handleRemoveKeyword(keyword)}
+                    className="ml-1 hover:text-destructive"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+            </div>
+          )}
+        </div>
 
         {/* Stock Status */}
         <FormField
