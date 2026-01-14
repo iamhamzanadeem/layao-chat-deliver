@@ -40,8 +40,8 @@ export function extractProductKeywords(message: string): string[] {
   // Normalize the message
   const normalized = message
     .toLowerCase()
-    .replace(/[^\\w\\s]/g, ' ') // Remove punctuation
-    .replace(/\\s+/g, ' ')     // Normalize whitespace
+    .replace(/[^\w\s]/g, ' ') // Remove punctuation
+    .replace(/\s+/g, ' ')     // Normalize whitespace
     .trim();
 
   // Split into words and filter
@@ -78,6 +78,7 @@ export function isProductRequest(message: string): boolean {
  * Builds a Supabase OR filter string for product name search
  * @param keywords - Array of keywords to search for
  * @returns Filter string for Supabase .or() method
+ * @deprecated Use fuzzy search instead for better matching
  */
 export function buildProductSearchFilter(keywords: string[]): string {
   if (!keywords.length) return '';

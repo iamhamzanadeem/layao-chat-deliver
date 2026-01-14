@@ -15,7 +15,14 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { useCreateCategory, useUpdateCategory } from '@/hooks/admin/useCategories';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useCategories, useCreateCategory, useUpdateCategory } from '@/hooks/admin/useCategories';
 import { Tables } from '@/integrations/supabase/types';
 
 type Category = Tables<'categories'>;
@@ -25,6 +32,7 @@ const formSchema = z.object({
   slug: z.string().min(1, 'Slug is required').regex(/^[a-z0-9-]+$/, 'Slug must be lowercase with hyphens only'),
   description: z.string().optional(),
   icon: z.string().optional(),
+  parent_id: z.string().optional().nullable(),
   is_active: z.boolean(),
 });
 
@@ -46,8 +54,28 @@ const generateSlug = (name: string): string => {
 };
 
 const CategoryForm = ({ category, onSuccess, onCancel }: CategoryFormProps) => {
+  const { data: allCategories = [] } = useCategories();
   const createCategory = useCreateCategory();
   const updateCategory = useUpdateCategory();
+
+  // Filter out current category and its children for parent selection
+  const getAvailableParents = (): Category[] => {
+    if (!category) return allCategories;
+    
+    // Get all descendant IDs to prevent circular references
+    const getDescendantIds = (parentId: string): string[] => {
+      const children = allCategories.filter(c => c.parent_id === parentId);
+      return [
+        parentId,
+        ...children.flatMap(child => getDescendantIds(child.id))
+      ];
+    };
+    
+    const excludeIds = new Set(getDescendantIds(category.id));
+    return allCategories.filter(c => !excludeIds.has(c.id));
+  };
+
+  const availableParents = getAvailableParents();
 
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -56,6 +84,7 @@ const CategoryForm = ({ category, onSuccess, onCancel }: CategoryFormProps) => {
       slug: category?.slug || '',
       description: category?.description || '',
       icon: category?.icon || '',
+      parent_id: category?.parent_id || null,
       is_active: category?.is_active ?? true,
     },
   });
@@ -74,6 +103,7 @@ const CategoryForm = ({ category, onSuccess, onCancel }: CategoryFormProps) => {
       is_active: values.is_active,
       description: values.description || null,
       icon: values.icon || null,
+      parent_id: values.parent_id || null,
     };
 
     if (category) {
@@ -110,6 +140,39 @@ const CategoryForm = ({ category, onSuccess, onCancel }: CategoryFormProps) => {
               </FormControl>
               <FormDescription>
                 Use an emoji to represent this category
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Parent Category */}
+        <FormField
+          control={form.control}
+          name="parent_id"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Parent Category</FormLabel>
+              <Select 
+                onValueChange={(value) => field.onChange(value === 'none' ? null : value)} 
+                value={field.value || 'none'}
+              >
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select parent (optional)" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="none">None (Top Level)</SelectItem>
+                  {availableParents.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.icon} {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Select a parent to create a subcategory
               </FormDescription>
               <FormMessage />
             </FormItem>
