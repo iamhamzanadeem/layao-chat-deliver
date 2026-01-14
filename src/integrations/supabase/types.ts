@@ -65,6 +65,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean
           name: string
+          parent_id: string | null
           slug: string
           sort_order: number
         }
@@ -76,6 +77,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name: string
+          parent_id?: string | null
           slug: string
           sort_order?: number
         }
@@ -87,10 +89,19 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean
           name?: string
+          parent_id?: string | null
           slug?: string
           sort_order?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       messages: {
         Row: {
@@ -242,6 +253,7 @@ export type Database = {
           is_available: boolean
           name: string
           price: number
+          search_keywords: string[] | null
           stock_status: string
           unit: string
           updated_at: string
@@ -255,6 +267,7 @@ export type Database = {
           is_available?: boolean
           name: string
           price: number
+          search_keywords?: string[] | null
           stock_status?: string
           unit?: string
           updated_at?: string
@@ -268,6 +281,7 @@ export type Database = {
           is_available?: boolean
           name?: string
           price?: number
+          search_keywords?: string[] | null
           stock_status?: string
           unit?: string
           updated_at?: string
