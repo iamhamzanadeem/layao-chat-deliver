@@ -1,54 +1,99 @@
 /**
  * Fuzzy Search Utility
- * Provides typo-tolerant matching using Levenshtein distance algorithm
+ * Provides typo-tolerant matching using multiple algorithms:
+ * - Levenshtein distance with keyboard proximity weighting
+ * - N-gram (trigram) similarity
  */
 
 /**
- * Calculates the Levenshtein distance between two strings
- * This represents the minimum number of single-character edits needed
- * to transform one string into the other
+ * QWERTY keyboard adjacency map for proximity-weighted distance
+ */
+const KEYBOARD_ADJACENT: Record<string, Set<string>> = {
+  q: new Set(['w', 'a']),
+  w: new Set(['q', 'e', 'a', 's']),
+  e: new Set(['w', 'r', 's', 'd']),
+  r: new Set(['e', 't', 'd', 'f']),
+  t: new Set(['r', 'y', 'f', 'g']),
+  y: new Set(['t', 'u', 'g', 'h']),
+  u: new Set(['y', 'i', 'h', 'j']),
+  i: new Set(['u', 'o', 'j', 'k']),
+  o: new Set(['i', 'p', 'k', 'l']),
+  p: new Set(['o', 'l']),
+  a: new Set(['q', 'w', 's', 'z']),
+  s: new Set(['w', 'e', 'a', 'd', 'z', 'x']),
+  d: new Set(['e', 'r', 's', 'f', 'x', 'c']),
+  f: new Set(['r', 't', 'd', 'g', 'c', 'v']),
+  g: new Set(['t', 'y', 'f', 'h', 'v', 'b']),
+  h: new Set(['y', 'u', 'g', 'j', 'b', 'n']),
+  j: new Set(['u', 'i', 'h', 'k', 'n', 'm']),
+  k: new Set(['i', 'o', 'j', 'l', 'm']),
+  l: new Set(['o', 'p', 'k']),
+  z: new Set(['a', 's', 'x']),
+  x: new Set(['s', 'd', 'z', 'c']),
+  c: new Set(['d', 'f', 'x', 'v']),
+  v: new Set(['f', 'g', 'c', 'b']),
+  b: new Set(['g', 'h', 'v', 'n']),
+  n: new Set(['h', 'j', 'b', 'm']),
+  m: new Set(['j', 'k', 'n']),
+};
+
+/**
+ * Checks if two characters are adjacent on QWERTY keyboard
+ */
+function areKeysAdjacent(char1: string, char2: string): boolean {
+  const adjacentKeys = KEYBOARD_ADJACENT[char1.toLowerCase()];
+  return adjacentKeys ? adjacentKeys.has(char2.toLowerCase()) : false;
+}
+
+/**
+ * Calculates keyboard-weighted Levenshtein distance
+ * Adjacent key substitutions cost 0.5 instead of 1.0
  * 
  * @param a - First string
  * @param b - Second string
- * @returns The edit distance between the two strings
+ * @returns The weighted edit distance
  */
-export function levenshteinDistance(a: string, b: string): number {
+export function weightedLevenshteinDistance(a: string, b: string): number {
   const aLower = a.toLowerCase();
   const bLower = b.toLowerCase();
   
-  // Early exit for empty strings
   if (aLower.length === 0) return bLower.length;
   if (bLower.length === 0) return aLower.length;
-  
-  // Early exit for exact match
   if (aLower === bLower) return 0;
   
   const aLen = aLower.length;
   const bLen = bLower.length;
   
-  // Create matrix using two rows for memory efficiency
   let prevRow = new Array(bLen + 1);
   let currRow = new Array(bLen + 1);
   
-  // Initialize first row
   for (let j = 0; j <= bLen; j++) {
     prevRow[j] = j;
   }
   
-  // Fill in the rest of the matrix
   for (let i = 1; i <= aLen; i++) {
     currRow[0] = i;
     
     for (let j = 1; j <= bLen; j++) {
-      const cost = aLower[i - 1] === bLower[j - 1] ? 0 : 1;
+      const charA = aLower[i - 1];
+      const charB = bLower[j - 1];
+      
+      let cost: number;
+      if (charA === charB) {
+        cost = 0;
+      } else if (areKeysAdjacent(charA, charB)) {
+        cost = 0.5; // Reduced cost for adjacent keys
+      } else {
+        cost = 1;
+      }
+      
       currRow[j] = Math.min(
-        prevRow[j] + 1,      // deletion
-        currRow[j - 1] + 1,  // insertion
-        prevRow[j - 1] + cost // substitution
+        prevRow[j] + 1,        // deletion
+        currRow[j - 1] + 1,    // insertion
+        prevRow[j - 1] + cost  // substitution
       );
     }
     
-    // Swap rows
     [prevRow, currRow] = [currRow, prevRow];
   }
   
@@ -56,27 +101,129 @@ export function levenshteinDistance(a: string, b: string): number {
 }
 
 /**
- * Determines the maximum allowed edit distance based on word length
- * Shorter words are more sensitive to typos, so we allow fewer edits
- * 
- * @param wordLength - Length of the word being compared
- * @returns Maximum allowed edit distance
+ * Standard Levenshtein distance (kept for compatibility)
  */
-export function getMaxDistance(wordLength: number): number {
-  if (wordLength <= 2) return 0;  // Very short words: exact match only
-  if (wordLength <= 4) return 1;  // Short words: 1 typo allowed
-  if (wordLength <= 7) return 2;  // Medium words: 2 typos allowed
-  return 3;                        // Long words: 3 typos allowed
+export function levenshteinDistance(a: string, b: string): number {
+  const aLower = a.toLowerCase();
+  const bLower = b.toLowerCase();
+  
+  if (aLower.length === 0) return bLower.length;
+  if (bLower.length === 0) return aLower.length;
+  if (aLower === bLower) return 0;
+  
+  const aLen = aLower.length;
+  const bLen = bLower.length;
+  
+  let prevRow = new Array(bLen + 1);
+  let currRow = new Array(bLen + 1);
+  
+  for (let j = 0; j <= bLen; j++) {
+    prevRow[j] = j;
+  }
+  
+  for (let i = 1; i <= aLen; i++) {
+    currRow[0] = i;
+    
+    for (let j = 1; j <= bLen; j++) {
+      const cost = aLower[i - 1] === bLower[j - 1] ? 0 : 1;
+      currRow[j] = Math.min(
+        prevRow[j] + 1,
+        currRow[j - 1] + 1,
+        prevRow[j - 1] + cost
+      );
+    }
+    
+    [prevRow, currRow] = [currRow, prevRow];
+  }
+  
+  return prevRow[bLen];
+}
+
+// ============= N-gram (Trigram) Similarity =============
+
+/**
+ * Generates n-grams from a word with padding
+ * 
+ * @param word - Word to generate n-grams from
+ * @param n - Size of each gram (default: 3 for trigrams)
+ * @returns Set of n-grams
+ */
+export function getNgrams(word: string, n: number = 3): Set<string> {
+  const normalized = word.toLowerCase().trim();
+  if (normalized.length === 0) return new Set();
+  
+  // Pad the word for edge matching
+  const padded = `_${normalized}_`;
+  const ngrams = new Set<string>();
+  
+  for (let i = 0; i <= padded.length - n; i++) {
+    ngrams.add(padded.substring(i, i + n));
+  }
+  
+  return ngrams;
 }
 
 /**
- * Checks if two strings are similar within an acceptable tolerance
- * Uses adaptive distance based on word length
+ * Calculates n-gram (trigram) similarity between two strings
+ * Uses Jaccard coefficient: |A ∩ B| / |A ∪ B|
  * 
- * @param input - The user's input (potentially with typos)
- * @param target - The target string to match against
- * @param customMaxDistance - Optional custom maximum distance
- * @returns True if the strings are similar enough
+ * @param a - First string
+ * @param b - Second string
+ * @returns Similarity score from 0.0 to 1.0
+ */
+export function ngramSimilarity(a: string, b: string): number {
+  const ngramsA = getNgrams(a);
+  const ngramsB = getNgrams(b);
+  
+  if (ngramsA.size === 0 || ngramsB.size === 0) return 0;
+  
+  // Calculate intersection
+  let intersection = 0;
+  for (const ngram of ngramsA) {
+    if (ngramsB.has(ngram)) {
+      intersection++;
+    }
+  }
+  
+  // Calculate union
+  const union = ngramsA.size + ngramsB.size - intersection;
+  
+  return union > 0 ? intersection / union : 0;
+}
+
+/**
+ * Gets n-gram similarity score (0-7 scale)
+ * 
+ * @param input - User's input
+ * @param target - Target to compare
+ * @returns Score from 0 to 7
+ */
+export function getNgramScore(input: string, target: string): number {
+  const similarity = ngramSimilarity(input, target);
+  
+  if (similarity >= 0.7) return 7;
+  if (similarity >= 0.5) return 6;
+  if (similarity >= 0.4) return 5;
+  if (similarity >= 0.3) return 4;
+  if (similarity >= 0.2) return 3;
+  
+  return 0;
+}
+
+// ============= Core Functions =============
+
+/**
+ * Determines the maximum allowed edit distance based on word length
+ */
+export function getMaxDistance(wordLength: number): number {
+  if (wordLength <= 2) return 0;
+  if (wordLength <= 4) return 1;
+  if (wordLength <= 7) return 2;
+  return 3;
+}
+
+/**
+ * Checks if two strings are similar (supports fuzzy and n-gram matching)
  */
 export function isSimilar(
   input: string, 
@@ -89,25 +236,26 @@ export function isSimilar(
   // Exact match
   if (inputLower === targetLower) return true;
   
-  // Substring match (input is part of target or vice versa)
+  // Substring match
   if (targetLower.includes(inputLower) || inputLower.includes(targetLower)) {
     return true;
   }
   
-  // Calculate distance
-  const distance = levenshteinDistance(inputLower, targetLower);
+  // N-gram similarity check
+  if (ngramSimilarity(inputLower, targetLower) >= 0.4) {
+    return true;
+  }
+  
+  // Weighted Levenshtein check
+  const distance = weightedLevenshteinDistance(inputLower, targetLower);
   const maxDistance = customMaxDistance ?? getMaxDistance(Math.min(inputLower.length, targetLower.length));
   
   return distance <= maxDistance;
 }
 
 /**
- * Calculates a similarity score between two strings
- * Higher score means more similar (0 = no match, 10 = exact match)
- * 
- * @param input - The user's input
- * @param target - The target string
- * @returns Similarity score from 0 to 10
+ * Calculates comprehensive similarity score using multiple algorithms
+ * Higher score = more similar (0 = no match, 10 = exact match)
  */
 export function getSimilarityScore(input: string, target: string): number {
   const inputLower = input.toLowerCase().trim();
@@ -125,24 +273,25 @@ export function getSimilarityScore(input: string, target: string): number {
   // Input contains target
   if (inputLower.includes(targetLower)) return 7;
   
-  // Fuzzy match based on distance
-  const distance = levenshteinDistance(inputLower, targetLower);
+  // N-gram similarity score
+  const ngramScore = getNgramScore(inputLower, targetLower);
+  if (ngramScore >= 5) return ngramScore;
+  
+  // Weighted Levenshtein-based score
+  const distance = weightedLevenshteinDistance(inputLower, targetLower);
   const maxLen = Math.max(inputLower.length, targetLower.length);
   
   if (maxLen === 0) return 0;
   
-  // Calculate normalized score (0-6 range for fuzzy matches)
   const normalizedSimilarity = 1 - (distance / maxLen);
-  return Math.max(0, Math.round(normalizedSimilarity * 6));
+  const levScore = Math.max(0, Math.round(normalizedSimilarity * 6));
+  
+  // Return best score from n-gram or levenshtein
+  return Math.max(ngramScore, levScore);
 }
 
 /**
  * Finds the best matching keyword from an array
- * Returns the keyword with highest similarity score
- * 
- * @param input - User's input
- * @param keywords - Array of keywords to search through
- * @returns Best matching keyword and its score, or null if no match
  */
 export function findBestMatch(
   input: string, 
@@ -158,18 +307,16 @@ export function findBestMatch(
     if (score > 0 && (!bestMatch || score > bestMatch.score)) {
       bestMatch = { keyword, score };
     }
+    
+    // Early exit on perfect match
+    if (bestMatch?.score === 10) break;
   }
   
   return bestMatch;
 }
 
 /**
- * Checks if any keyword in the array matches the input
- * Using fuzzy matching
- * 
- * @param input - User's input
- * @param keywords - Array of keywords to search
- * @returns True if any keyword matches
+ * Checks if any keyword in the array matches the input using fuzzy matching
  */
 export function hasMatchingKeyword(input: string, keywords: string[] | null): boolean {
   if (!keywords || keywords.length === 0) return false;
