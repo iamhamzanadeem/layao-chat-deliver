@@ -1,8 +1,14 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { extractProductKeywords, isProductRequest } from '@/lib/productSearch';
-import { getSimilarityScore, hasMatchingKeyword } from '@/lib/fuzzySearch';
+import { 
+  getSimilarityScore, 
+  hasMatchingKeyword, 
+  getNgramScore, 
+  weightedLevenshteinDistance 
+} from '@/lib/fuzzySearch';
+import { getPhoneticScore, getBestPhoneticScore } from '@/lib/phoneticSearch';
 
 type Product = Tables<'products'>;
 
@@ -16,42 +22,114 @@ interface SearchResult {
   hasResults: boolean;
 }
 
+interface CacheEntry {
+  result: SearchResult;
+  timestamp: number;
+}
+
+// Cache TTL in milliseconds (5 minutes)
+const CACHE_TTL = 5 * 60 * 1000;
+const MAX_CACHE_SIZE = 50;
+
 /**
- * Calculates relevance score for a product based on user keywords
- * Uses fuzzy matching for typo tolerance
+ * Scoring thresholds for early exit optimization
+ */
+const SCORE_THRESHOLD = {
+  EXCELLENT: 9, // Skip expensive algorithms if we find excellent match
+  GOOD: 7,      // Good enough to include in results
+  MINIMUM: 3,   // Minimum score to be considered a match
+};
+
+/**
+ * Calculates comprehensive relevance score for a product
+ * Uses multi-algorithm fusion: exact match > substring > phonetic > n-gram > fuzzy
  */
 function calculateProductScore(product: Product, keywords: string[]): number {
   let totalScore = 0;
   const productName = product.name.toLowerCase();
+  const productWords = productName.split(/\s+/);
   const searchKeywords = product.search_keywords as string[] | null;
 
   for (const keyword of keywords) {
     const keywordLower = keyword.toLowerCase();
+    let bestKeywordScore = 0;
     
-    // Check product name for exact/partial match
-    const nameScore = getSimilarityScore(keywordLower, productName);
-    if (nameScore > 0) {
-      totalScore += nameScore;
-      continue; // Found in name, skip keyword check
+    // === Check product name ===
+    
+    // 1. Exact name match (highest priority)
+    if (productName === keywordLower) {
+      bestKeywordScore = 10;
     }
-    
-    // Check search_keywords array for fuzzy match
-    if (searchKeywords && searchKeywords.length > 0) {
-      // Check if any keyword matches with fuzzy logic
-      if (hasMatchingKeyword(keywordLower, searchKeywords)) {
-        totalScore += 8; // Good match in keywords
-        continue;
-      }
-      
-      // Check for partial matches in keywords
-      for (const sk of searchKeywords) {
-        const score = getSimilarityScore(keywordLower, sk);
-        if (score >= 5) {
-          totalScore += score;
-          break; // Take best match from keywords
+    // 2. Name starts with keyword
+    else if (productName.startsWith(keywordLower)) {
+      bestKeywordScore = Math.max(bestKeywordScore, 9);
+    }
+    // 3. Name contains keyword
+    else if (productName.includes(keywordLower)) {
+      bestKeywordScore = Math.max(bestKeywordScore, 8);
+    }
+    // 4. Any word in name matches
+    else {
+      for (const word of productWords) {
+        if (word === keywordLower) {
+          bestKeywordScore = Math.max(bestKeywordScore, 10);
+          break;
+        }
+        if (word.startsWith(keywordLower)) {
+          bestKeywordScore = Math.max(bestKeywordScore, 9);
         }
       }
     }
+    
+    // Early exit if we found excellent match
+    if (bestKeywordScore >= SCORE_THRESHOLD.EXCELLENT) {
+      totalScore += bestKeywordScore;
+      continue;
+    }
+    
+    // === Advanced matching (only if no strong match found) ===
+    
+    // 5. Phonetic matching on product name words
+    for (const word of productWords) {
+      const phoneticScore = getPhoneticScore(keywordLower, word);
+      bestKeywordScore = Math.max(bestKeywordScore, phoneticScore);
+    }
+    
+    // 6. N-gram similarity on product name
+    const ngramScore = getNgramScore(keywordLower, productName);
+    bestKeywordScore = Math.max(bestKeywordScore, ngramScore);
+    
+    // 7. Weighted Levenshtein on product name words
+    for (const word of productWords) {
+      if (word.length < 2) continue;
+      
+      const distance = weightedLevenshteinDistance(keywordLower, word);
+      const maxLen = Math.max(keywordLower.length, word.length);
+      const normalizedScore = Math.max(0, Math.round((1 - distance / maxLen) * 6));
+      
+      if (normalizedScore >= SCORE_THRESHOLD.MINIMUM) {
+        bestKeywordScore = Math.max(bestKeywordScore, normalizedScore);
+      }
+    }
+    
+    // === Check search_keywords array ===
+    if (searchKeywords && searchKeywords.length > 0) {
+      // Exact keyword match
+      if (searchKeywords.some(sk => sk.toLowerCase() === keywordLower)) {
+        bestKeywordScore = Math.max(bestKeywordScore, 8);
+      }
+      // Fuzzy keyword match
+      else if (hasMatchingKeyword(keywordLower, searchKeywords)) {
+        bestKeywordScore = Math.max(bestKeywordScore, 6);
+      }
+      // Phonetic match in keywords
+      else {
+        const phoneticKeywordScore = getBestPhoneticScore(keywordLower, searchKeywords);
+        bestKeywordScore = Math.max(bestKeywordScore, phoneticKeywordScore);
+      }
+    }
+    
+    totalScore += bestKeywordScore;
   }
 
   return totalScore;
@@ -59,15 +137,48 @@ function calculateProductScore(product: Product, keywords: string[]): number {
 
 /**
  * Hook for searching products based on natural language messages
- * Supports fuzzy matching for typo tolerance
+ * Features:
+ * - Multi-algorithm fuzzy matching (Levenshtein, N-gram, Phonetic)
+ * - Keyboard proximity weighting for typos
+ * - Result caching for performance
  */
 export const useProductSearch = () => {
+  // Cache for recent search results
+  const cacheRef = useRef<Map<string, CacheEntry>>(new Map());
+
   /**
-   * Search products by keywords extracted from a natural language message
-   * Uses fuzzy matching to handle typos like "eg" for "eggs" or "bred" for "bread"
-   * 
-   * @param message - User's message (e.g., "I want eg and pread")
-   * @returns Search result with matching products and extracted keywords
+   * Generates cache key from keywords
+   */
+  const getCacheKey = useCallback((keywords: string[]): string => {
+    return keywords.slice().sort().join('|').toLowerCase();
+  }, []);
+
+  /**
+   * Cleans expired cache entries
+   */
+  const cleanCache = useCallback(() => {
+    const now = Date.now();
+    const cache = cacheRef.current;
+    
+    for (const [key, entry] of cache.entries()) {
+      if (now - entry.timestamp > CACHE_TTL) {
+        cache.delete(key);
+      }
+    }
+    
+    // Enforce max size by removing oldest entries
+    if (cache.size > MAX_CACHE_SIZE) {
+      const entries = Array.from(cache.entries())
+        .sort((a, b) => a[1].timestamp - b[1].timestamp);
+      
+      const toDelete = entries.slice(0, cache.size - MAX_CACHE_SIZE);
+      toDelete.forEach(([key]) => cache.delete(key));
+    }
+  }, []);
+
+  /**
+   * Search products by keywords extracted from natural language message
+   * Uses multi-algorithm matching for maximum typo tolerance
    */
   const searchByMessage = useCallback(async (message: string): Promise<SearchResult> => {
     const keywords = extractProductKeywords(message);
@@ -76,7 +187,18 @@ export const useProductSearch = () => {
       return { products: [], keywords: [], hasResults: false };
     }
 
-    // Fetch all available products (we need to do client-side fuzzy matching)
+    // Check cache first
+    const cacheKey = getCacheKey(keywords);
+    const cached = cacheRef.current.get(cacheKey);
+    
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      return cached.result;
+    }
+
+    // Clean old cache entries periodically
+    cleanCache();
+
+    // Fetch all available products for client-side scoring
     const { data: allProducts, error } = await supabase
       .from('products')
       .select('*')
@@ -92,25 +214,33 @@ export const useProductSearch = () => {
       return { products: [], keywords, hasResults: false };
     }
 
-    // Score each product based on keyword matches
+    // Score each product using multi-algorithm matching
     const scoredProducts: ScoredProduct[] = allProducts.map(product => ({
       ...product,
       relevanceScore: calculateProductScore(product, keywords),
     }));
 
-    // Filter products with positive scores and sort by relevance
+    // Filter and sort by relevance
     const matchingProducts = scoredProducts
-      .filter(p => p.relevanceScore > 0)
+      .filter(p => p.relevanceScore >= SCORE_THRESHOLD.MINIMUM)
       .sort((a, b) => b.relevanceScore - a.relevanceScore)
       .slice(0, 12) // Limit to top 12 results
-      .map(({ relevanceScore, ...product }) => product); // Remove score from result
+      .map(({ relevanceScore, ...product }) => product);
 
-    return {
+    const result: SearchResult = {
       products: matchingProducts,
       keywords,
       hasResults: matchingProducts.length > 0,
     };
-  }, []);
+
+    // Cache the result
+    cacheRef.current.set(cacheKey, {
+      result,
+      timestamp: Date.now(),
+    });
+
+    return result;
+  }, [getCacheKey, cleanCache]);
 
   /**
    * Check if a message appears to be a product request
@@ -119,8 +249,16 @@ export const useProductSearch = () => {
     return isProductRequest(message);
   }, []);
 
+  /**
+   * Clears the search cache (useful for testing or after inventory updates)
+   */
+  const clearCache = useCallback(() => {
+    cacheRef.current.clear();
+  }, []);
+
   return {
     searchByMessage,
     isProductRequest: checkIsProductRequest,
+    clearCache,
   };
 };
