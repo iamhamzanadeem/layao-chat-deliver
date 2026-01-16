@@ -201,11 +201,11 @@ export function ngramSimilarity(a: string, b: string): number {
 export function getNgramScore(input: string, target: string): number {
   const similarity = ngramSimilarity(input, target);
   
+  // Tightened thresholds to prevent false positives
   if (similarity >= 0.7) return 7;
   if (similarity >= 0.5) return 6;
   if (similarity >= 0.4) return 5;
-  if (similarity >= 0.3) return 4;
-  if (similarity >= 0.2) return 3;
+  // Removed 0.3 and 0.2 thresholds - too permissive
   
   return 0;
 }
