@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingCart, ChevronDown } from 'lucide-react';
+import { X, ShoppingCart, ChevronDown, Clock } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import ChatBubble from '@/components/app/chat/ChatBubble';
 import ChatInput from '@/components/app/chat/ChatInput';
@@ -10,6 +10,8 @@ import ProductResults from '@/components/app/chat/ProductResults';
 import CategorySelector from '@/components/app/chat/CategorySelector';
 import ProductGrid from '@/components/app/chat/ProductGrid';
 import CartSheet from '@/components/app/chat/CartSheet';
+import CartPreviewBar from '@/components/app/chat/CartPreviewBar';
+import TypingIndicator from '@/components/app/chat/TypingIndicator';
 import DeliveryTypeSelector from '@/components/app/chat/DeliveryTypeSelector';
 import AddressSelector from '@/components/app/chat/AddressSelector';
 import OrderConfirmation from '@/components/app/chat/OrderConfirmation';
@@ -20,6 +22,7 @@ import { useProductSearch } from '@/hooks/app/useProductSearch';
 import { useCreateOrder } from '@/hooks/app/useCreateOrder';
 import type { ChatMessage, ProductCardData } from '@/types/chat';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { AppSidebarMobile } from '@/components/app/AppSidebar';
 
 interface AppLayoutContext {
@@ -64,6 +67,9 @@ const Chat = () => {
   
   // Checkout flow state
   const [checkoutStep, setCheckoutStep] = useState<CheckoutStep>('idle');
+  
+  // Loading state for typing indicator
+  const [isSearching, setIsSearching] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -103,8 +109,13 @@ const Chat = () => {
     };
     setMessages((prev) => [...prev, userMessage]);
 
+    // Show typing indicator while searching
+    setIsSearching(true);
+
     // Search for products based on the message
     const searchResult = await searchByMessage(content);
+
+    setIsSearching(false);
 
     if (searchResult.hasResults) {
       // Found matching products - display them inline
@@ -132,6 +143,12 @@ const Chat = () => {
     if (action === 'browse') {
       setIsBrowsing(true);
       setSelectedCategoryId(null);
+    } else if (action === 'popular') {
+      addBotMessage("🔥 Here are our most popular items! Searching for trending products...");
+      setIsBrowsing(true);
+    } else if (action === 'deals') {
+      addBotMessage("💰 Looking for deals? Check out our special offers!");
+      setIsBrowsing(true);
     } else if (action === 'help') {
       addBotMessage("Need help? You can:\n• Browse Menu - see all products\n• Type what you want\n• Send a photo of items\n• Call us: 0300-1234567");
     } else if (action === 'track') {
@@ -246,7 +263,7 @@ const Chat = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border px-4 h-14 flex items-center justify-between">
+      <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border px-4 h-16 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <AppSidebarMobile selectedOrderId={selectedOrderId} onSelectOrder={onSelectOrder} />
           <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
@@ -254,19 +271,37 @@ const Chat = () => {
           </div>
           <div>
             <h1 className="font-semibold text-foreground">Layao</h1>
-            <p className="text-xs text-success">Online • Ready to deliver</p>
+            <div className="flex items-center gap-1.5 text-xs">
+              <span className="text-success">● Online</span>
+              <span className="text-muted-foreground">•</span>
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                30-45 min
+              </span>
+            </div>
           </div>
         </div>
         
         {itemCount > 0 && checkoutStep === 'idle' && (
-          <Button
-            size="sm"
-            className="gap-2"
-            onClick={() => setCartOpen(true)}
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
           >
-            <ShoppingCart className="w-4 h-4" />
-            Rs. {total.toFixed(0)}
-          </Button>
+            <Button
+              size="sm"
+              className="gap-2 relative"
+              onClick={() => setCartOpen(true)}
+            >
+              <ShoppingCart className="w-4 h-4" />
+              <span>Rs. {total.toFixed(0)}</span>
+              <Badge 
+                variant="secondary" 
+                className="absolute -top-2 -right-2 h-5 w-5 p-0 flex items-center justify-center text-[10px] bg-accent text-accent-foreground"
+              >
+                {itemCount}
+              </Badge>
+            </Button>
+          </motion.div>
         )}
       </div>
 
@@ -315,9 +350,22 @@ const Chat = () => {
         {messages.map((message, index) => (
           <motion.div
             key={message.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
+            initial={{ 
+              opacity: 0, 
+              x: message.isFromUser ? 20 : -20,
+              scale: 0.95 
+            }}
+            animate={{ 
+              opacity: 1, 
+              x: 0,
+              scale: 1 
+            }}
+            transition={{ 
+              delay: index * 0.03,
+              type: 'spring',
+              stiffness: 300,
+              damping: 25
+            }}
             className={message.isFromUser ? 'flex justify-end' : ''}
           >
             {message.type === 'product_card' && message.metadata ? (
@@ -343,6 +391,19 @@ const Chat = () => {
           </motion.div>
         ))}
         
+        {/* Typing indicator while searching */}
+        <AnimatePresence>
+          {isSearching && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+            >
+              <TypingIndicator />
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
         {/* Checkout step component */}
         {checkoutStep !== 'idle' && (
           <motion.div
@@ -359,6 +420,11 @@ const Chat = () => {
 
       {/* Quick Actions - hide during checkout */}
       {checkoutStep === 'idle' && <QuickActions onAction={handleQuickAction} />}
+
+      {/* Cart Preview Bar - hide during checkout */}
+      {checkoutStep === 'idle' && (
+        <CartPreviewBar onClick={() => setCartOpen(true)} />
+      )}
 
       {/* Input - hide during checkout */}
       {checkoutStep === 'idle' && <ChatInput onSendMessage={handleSendMessage} />}

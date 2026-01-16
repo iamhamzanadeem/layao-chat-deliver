@@ -176,4 +176,14 @@
   .glass-strong {
     @apply bg-background/95 backdrop-blur-xl border border-border;
   }
+  
+  /* Hide scrollbar for cleaner UI */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 }

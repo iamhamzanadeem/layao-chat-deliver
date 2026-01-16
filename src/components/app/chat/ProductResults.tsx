@@ -1,6 +1,8 @@
-import { Plus, Minus } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useState } from 'react';
+import { Plus, Minus, Check, AlertTriangle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useOrder } from '@/contexts/OrderContext';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -11,8 +13,22 @@ interface ProductResultsProps {
   keywords: string[];
 }
 
+type StockStatus = 'in_stock' | 'low_stock' | 'out_of_stock';
+
+const getStockInfo = (status: string): { label: string; variant: StockStatus; color: string } => {
+  switch (status) {
+    case 'low_stock':
+      return { label: 'Low Stock', variant: 'low_stock', color: 'text-warning bg-warning/10 border-warning/20' };
+    case 'out_of_stock':
+      return { label: 'Out of Stock', variant: 'out_of_stock', color: 'text-destructive bg-destructive/10 border-destructive/20' };
+    default:
+      return { label: 'In Stock', variant: 'in_stock', color: 'text-success bg-success/10 border-success/20' };
+  }
+};
+
 const ProductResults = ({ products, keywords }: ProductResultsProps) => {
   const { items, addItem, updateQuantity, removeItem } = useOrder();
+  const [justAdded, setJustAdded] = useState<string | null>(null);
 
   const handleAdd = (product: Product) => {
     addItem({
@@ -23,6 +39,10 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
       unit: product.unit,
       imageUrl: product.image_url || undefined,
     });
+    
+    // Show checkmark animation
+    setJustAdded(product.id);
+    setTimeout(() => setJustAdded(null), 1000);
   };
 
   const handleIncrease = (product: Product) => {
@@ -56,9 +76,12 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
         Found {products.length} item{products.length !== 1 ? 's' : ''} matching "{keywords.join(', ')}":
       </p>
       
-      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1">
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
         {products.map((product, index) => {
           const quantity = getQuantity(product.id);
+          const stockInfo = getStockInfo(product.stock_status);
+          const isOutOfStock = product.stock_status === 'out_of_stock';
+          const wasJustAdded = justAdded === product.id;
           
           return (
             <motion.div
@@ -66,21 +89,57 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.05 }}
-              className="flex-shrink-0 w-36 bg-card rounded-xl border border-border overflow-hidden shadow-sm"
+              whileHover={{ y: -2 }}
+              className="flex-shrink-0 w-36 bg-card rounded-xl border border-border overflow-hidden shadow-sm hover:shadow-md transition-shadow"
             >
               {/* Product Image */}
-              <div className="aspect-square bg-muted relative">
+              <div className="aspect-square bg-muted relative overflow-hidden">
                 {product.image_url ? (
                   <img
                     src={product.image_url}
                     alt={product.name}
-                    className="w-full h-full object-cover"
+                    className={`w-full h-full object-cover transition-opacity ${isOutOfStock ? 'opacity-50' : ''}`}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                     <span className="text-3xl">🛒</span>
                   </div>
                 )}
+                
+                {/* Stock badge */}
+                {product.stock_status !== 'in_stock' && (
+                  <div className="absolute top-2 left-2">
+                    <Badge 
+                      variant="outline" 
+                      className={`text-[10px] px-1.5 py-0.5 ${stockInfo.color}`}
+                    >
+                      {stockInfo.variant === 'low_stock' && (
+                        <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
+                      )}
+                      {stockInfo.label}
+                    </Badge>
+                  </div>
+                )}
+
+                {/* Added checkmark overlay */}
+                <AnimatePresence>
+                  {wasJustAdded && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0 }}
+                      className="absolute inset-0 bg-success/80 flex items-center justify-center"
+                    >
+                      <motion.div
+                        initial={{ scale: 0 }}
+                        animate={{ scale: [0, 1.2, 1] }}
+                        transition={{ duration: 0.3 }}
+                      >
+                        <Check className="w-10 h-10 text-success-foreground" />
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               
               {/* Product Info */}
@@ -94,35 +153,56 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
                 
                 {/* Add/Quantity Controls */}
                 <div className="mt-2">
-                  {quantity > 0 ? (
-                    <div className="flex items-center justify-between bg-primary/10 rounded-lg p-1">
+                  {isOutOfStock ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      className="w-full h-7 text-xs opacity-50 cursor-not-allowed"
+                      disabled
+                    >
+                      Unavailable
+                    </Button>
+                  ) : quantity > 0 ? (
+                    <motion.div 
+                      layout
+                      className="flex items-center justify-between bg-primary/10 rounded-lg p-1"
+                    >
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-6 w-6"
+                        className="h-6 w-6 hover:bg-primary/20"
                         onClick={() => handleDecrease(product)}
                       >
                         <Minus className="w-3 h-3" />
                       </Button>
-                      <span className="text-sm font-medium">{quantity}</span>
+                      <motion.span 
+                        key={quantity}
+                        initial={{ scale: 1.3 }}
+                        animate={{ scale: 1 }}
+                        className="text-sm font-medium text-primary"
+                      >
+                        {quantity}
+                      </motion.span>
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-6 w-6"
+                        className="h-6 w-6 hover:bg-primary/20"
                         onClick={() => handleIncrease(product)}
                       >
                         <Plus className="w-3 h-3" />
                       </Button>
-                    </div>
+                    </motion.div>
                   ) : (
-                    <Button
-                      size="sm"
-                      className="w-full h-7 text-xs"
-                      onClick={() => handleAdd(product)}
-                    >
-                      <Plus className="w-3 h-3 mr-1" />
-                      Add
-                    </Button>
+                    <motion.div whileTap={{ scale: 0.95 }}>
+                      <Button
+                        size="sm"
+                        className="w-full h-7 text-xs"
+                        onClick={() => handleAdd(product)}
+                      >
+                        <Plus className="w-3 h-3 mr-1" />
+                        Add
+                      </Button>
+                    </motion.div>
                   )}
                 </div>
               </div>
