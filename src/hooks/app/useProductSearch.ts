@@ -37,7 +37,7 @@ const MAX_CACHE_SIZE = 50;
 const SCORE_THRESHOLD = {
   EXCELLENT: 9, // Skip expensive algorithms if we find excellent match
   GOOD: 7,      // Good enough to include in results
-  MINIMUM: 3,   // Minimum score to be considered a match
+  MINIMUM: 5,   // Minimum score to be considered a match (raised from 3 to prevent false positives)
 };
 
 /**
@@ -87,28 +87,50 @@ function calculateProductScore(product: Product, keywords: string[]): number {
       continue;
     }
     
-    // === Advanced matching (only if no strong match found) ===
+    // === Advanced matching (only for keywords with 3+ characters) ===
+    const useFuzzyMatching = keywordLower.length >= 3;
     
-    // 5. Phonetic matching on product name words
-    for (const word of productWords) {
-      const phoneticScore = getPhoneticScore(keywordLower, word);
-      bestKeywordScore = Math.max(bestKeywordScore, phoneticScore);
-    }
-    
-    // 6. N-gram similarity on product name
-    const ngramScore = getNgramScore(keywordLower, productName);
-    bestKeywordScore = Math.max(bestKeywordScore, ngramScore);
-    
-    // 7. Weighted Levenshtein on product name words
-    for (const word of productWords) {
-      if (word.length < 2) continue;
+    if (useFuzzyMatching) {
+      // 5. Phonetic matching on product name words
+      for (const word of productWords) {
+        // Length ratio guard: skip if words are too different in length
+        const lengthRatio = Math.min(keywordLower.length, word.length) / 
+                            Math.max(keywordLower.length, word.length);
+        if (lengthRatio < 0.5) continue;
+        
+        const phoneticScore = getPhoneticScore(keywordLower, word);
+        bestKeywordScore = Math.max(bestKeywordScore, phoneticScore);
+      }
       
-      const distance = weightedLevenshteinDistance(keywordLower, word);
-      const maxLen = Math.max(keywordLower.length, word.length);
-      const normalizedScore = Math.max(0, Math.round((1 - distance / maxLen) * 6));
+      // 6. N-gram similarity on individual words (NOT full product name)
+      for (const word of productWords) {
+        if (word.length < 3) continue;
+        
+        // Length ratio guard
+        const lengthRatio = Math.min(keywordLower.length, word.length) / 
+                            Math.max(keywordLower.length, word.length);
+        if (lengthRatio < 0.5) continue;
+        
+        const ngramScore = getNgramScore(keywordLower, word);
+        bestKeywordScore = Math.max(bestKeywordScore, ngramScore);
+      }
       
-      if (normalizedScore >= SCORE_THRESHOLD.MINIMUM) {
-        bestKeywordScore = Math.max(bestKeywordScore, normalizedScore);
+      // 7. Weighted Levenshtein on product name words
+      for (const word of productWords) {
+        if (word.length < 3) continue;
+        
+        // Length ratio guard
+        const lengthRatio = Math.min(keywordLower.length, word.length) / 
+                            Math.max(keywordLower.length, word.length);
+        if (lengthRatio < 0.5) continue;
+        
+        const distance = weightedLevenshteinDistance(keywordLower, word);
+        const maxLen = Math.max(keywordLower.length, word.length);
+        const normalizedScore = Math.max(0, Math.round((1 - distance / maxLen) * 6));
+        
+        if (normalizedScore >= SCORE_THRESHOLD.MINIMUM) {
+          bestKeywordScore = Math.max(bestKeywordScore, normalizedScore);
+        }
       }
     }
     
