@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Menu, X, MessageCircle } from 'lucide-react';
+import { Menu, X, MessageCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 const navLinks = [
   { name: 'Home', path: '/' },
@@ -17,6 +18,7 @@ export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { canInstall, isInstalled, promptInstall } = usePWAInstall();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -29,6 +31,10 @@ export const Header = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
+
+  const handleInstall = async () => {
+    await promptInstall();
+  };
 
   return (
     <header
@@ -67,6 +73,19 @@ export const Header = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
+            {/* Install Button - Only show if installable and not already installed */}
+            {canInstall && !isInstalled && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleInstall}
+                className="gap-2 border-primary/30 text-primary hover:bg-primary/10"
+              >
+                <Download className="w-4 h-4" />
+                Install App
+              </Button>
+            )}
+            
             <Button asChild variant="ghost" size="sm">
               <Link to="/app">Login</Link>
             </Button>
@@ -114,6 +133,18 @@ export const Header = () => {
                 </Link>
               ))}
               <div className="border-t border-border mt-2 pt-4 flex flex-col gap-2">
+                {/* Mobile Install Button */}
+                {canInstall && !isInstalled && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full gap-2 border-primary text-primary"
+                    onClick={handleInstall}
+                  >
+                    <Download className="w-4 h-4" />
+                    Install App
+                  </Button>
+                )}
+                
                 <Button asChild variant="outline" className="w-full">
                   <Link to="/app">Login</Link>
                 </Button>
