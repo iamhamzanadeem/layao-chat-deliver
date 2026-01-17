@@ -1,11 +1,20 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MessageCircle, ArrowRight, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 export const CTASection = () => {
-  const { canInstall, promptInstall } = usePWAInstall();
+  const navigate = useNavigate();
+  const { canInstall, isInstalled, promptInstall } = usePWAInstall();
+
+  const handleInstall = async () => {
+    if (canInstall) {
+      await promptInstall();
+    } else {
+      navigate('/install');
+    }
+  };
 
   return (
     <section className="py-20 md:py-28">
@@ -44,9 +53,9 @@ export const CTASection = () => {
                 </Link>
               </Button>
               
-              {canInstall && (
+              {!isInstalled && (
                 <Button
-                  onClick={promptInstall}
+                  onClick={handleInstall}
                   size="lg"
                   variant="outline"
                   className="border-white/30 text-white hover:bg-white/10 text-lg px-8 h-14 w-full sm:w-auto"

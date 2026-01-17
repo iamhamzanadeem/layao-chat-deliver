@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, MessageCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,6 +18,7 @@ export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
   const { canInstall, isInstalled, promptInstall } = usePWAInstall();
 
   useEffect(() => {
@@ -33,7 +34,11 @@ export const Header = () => {
   }, [location.pathname]);
 
   const handleInstall = async () => {
-    await promptInstall();
+    if (canInstall) {
+      await promptInstall();
+    } else {
+      navigate('/install');
+    }
   };
 
   return (
@@ -73,8 +78,8 @@ export const Header = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            {/* Install Button - Only show if installable and not already installed */}
-            {canInstall && !isInstalled && (
+            {/* Install Button - Always visible unless already installed */}
+            {!isInstalled && (
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -133,8 +138,8 @@ export const Header = () => {
                 </Link>
               ))}
               <div className="border-t border-border mt-2 pt-4 flex flex-col gap-2">
-                {/* Mobile Install Button */}
-                {canInstall && !isInstalled && (
+                {/* Mobile Install Button - Always visible unless already installed */}
+                {!isInstalled && (
                   <Button 
                     variant="outline" 
                     className="w-full gap-2 border-primary text-primary"

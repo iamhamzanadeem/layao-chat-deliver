@@ -1,11 +1,20 @@
 import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { MessageCircle, ArrowRight, Sparkles, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 export const HeroSection = () => {
+  const navigate = useNavigate();
   const { canInstall, promptInstall, isInstalled } = usePWAInstall();
+
+  const handleInstall = async () => {
+    if (canInstall) {
+      await promptInstall();
+    } else {
+      navigate('/install');
+    }
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-20">
@@ -67,12 +76,12 @@ export const HeroSection = () => {
               </Link>
             </Button>
             
-            {canInstall && !isInstalled && (
+            {!isInstalled && (
               <Button 
                 size="lg" 
                 variant="outline" 
                 className="text-lg px-8 h-14 w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground"
-                onClick={promptInstall}
+                onClick={handleInstall}
               >
                 <Download className="w-5 h-5 mr-2" />
                 Install App
