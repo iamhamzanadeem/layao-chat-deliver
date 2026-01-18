@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, MessageCircle, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -18,8 +18,7 @@ export const Header = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const { canInstall, isInstalled, promptInstall } = usePWAInstall();
+  const { isInstalled, isIOS, promptInstall } = usePWAInstall();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -32,14 +31,6 @@ export const Header = () => {
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
-
-  const handleInstall = async () => {
-    if (canInstall) {
-      await promptInstall();
-    } else {
-      navigate('/install');
-    }
-  };
 
   return (
     <header
@@ -83,11 +74,11 @@ export const Header = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
-                onClick={handleInstall}
+                onClick={promptInstall}
                 className="gap-2 border-primary/30 text-primary hover:bg-primary/10"
               >
                 <Download className="w-4 h-4" />
-                Install App
+                {isIOS ? 'Add to Home Screen' : 'Install App'}
               </Button>
             )}
             
@@ -143,10 +134,10 @@ export const Header = () => {
                   <Button 
                     variant="outline" 
                     className="w-full gap-2 border-primary text-primary"
-                    onClick={handleInstall}
+                    onClick={promptInstall}
                   >
                     <Download className="w-4 h-4" />
-                    Install App
+                    {isIOS ? 'Add to Home Screen' : 'Install App'}
                   </Button>
                 )}
                 
