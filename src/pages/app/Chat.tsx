@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, ShoppingCart, ChevronDown, Clock } from 'lucide-react';
+import { X, ShoppingCart, ChevronDown, Clock, MapPin } from 'lucide-react';
 import { useOutletContext } from 'react-router-dom';
 import ChatBubble from '@/components/app/chat/ChatBubble';
 import ChatInput from '@/components/app/chat/ChatInput';
@@ -16,8 +16,10 @@ import DeliveryTypeSelector from '@/components/app/chat/DeliveryTypeSelector';
 import AddressSelector from '@/components/app/chat/AddressSelector';
 import OrderConfirmation from '@/components/app/chat/OrderConfirmation';
 import OrderPlaced from '@/components/app/chat/OrderPlaced';
+import LocationPrompt from '@/components/app/chat/LocationPrompt';
 import { useOrder, type DeliveryType, type DeliveryAddress } from '@/contexts/OrderContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { useLocation } from '@/contexts/LocationContext';
 import { useProductSearch } from '@/hooks/app/useProductSearch';
 import { useCreateOrder } from '@/hooks/app/useCreateOrder';
 import type { ChatMessage, ProductCardData } from '@/types/chat';
@@ -36,6 +38,13 @@ const Chat = () => {
   const { selectedOrderId, onSelectOrder } = useOutletContext<AppLayoutContext>();
   const { user } = useAuth();
   const { 
+    position,
+    selectedRestaurant,
+    isWithinDeliveryZone,
+    deliveryMessage,
+    requestLocation,
+  } = useLocation();
+  const { 
     items, 
     itemCount, 
     total, 
@@ -49,6 +58,9 @@ const Chat = () => {
   const { searchByMessage } = useProductSearch();
   const createOrder = useCreateOrder();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Show location prompt flag
+  const [hasShownLocationPrompt, setHasShownLocationPrompt] = useState(false);
   
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
@@ -274,10 +286,20 @@ const Chat = () => {
             <div className="flex items-center gap-1.5 text-xs">
               <span className="text-success">● Online</span>
               <span className="text-muted-foreground">•</span>
-              <span className="flex items-center gap-1 text-muted-foreground">
-                <Clock className="w-3 h-3" />
-                30-45 min
-              </span>
+              {selectedRestaurant ? (
+                <span className="flex items-center gap-1 text-primary">
+                  <MapPin className="w-3 h-3" />
+                  {selectedRestaurant.name}
+                </span>
+              ) : (
+                <button 
+                  onClick={requestLocation}
+                  className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <MapPin className="w-3 h-3" />
+                  Set location
+                </button>
+              )}
             </div>
           </div>
         </div>
