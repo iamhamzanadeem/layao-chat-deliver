@@ -9,6 +9,7 @@ import {
   weightedLevenshteinDistance 
 } from '@/lib/fuzzySearch';
 import { getPhoneticScore, getBestPhoneticScore } from '@/lib/phoneticSearch';
+import { useLocation } from '@/contexts/LocationContext';
 
 type Product = Tables<'products'>;
 
@@ -165,6 +166,9 @@ function calculateProductScore(product: Product, keywords: string[]): number {
  * - Result caching for performance
  */
 export const useProductSearch = () => {
+  // Get user location for proximity filtering
+  const { position, selectedRestaurant } = useLocation();
+  
   // Cache for recent search results
   const cacheRef = useRef<Map<string, CacheEntry>>(new Map());
 
@@ -220,19 +224,44 @@ export const useProductSearch = () => {
     // Clean old cache entries periodically
     cleanCache();
 
-    // Fetch all available products for client-side scoring
-    const { data: allProducts, error } = await supabase
-      .from('products')
-      .select('*')
-      .eq('is_available', true)
-      .order('name', { ascending: true });
+    let allProducts: Product[] = [];
+    
+    // If we have location and a selected restaurant, filter by location
+    if (position && selectedRestaurant) {
+      // Fetch products from nearby restaurants using RPC
+      const { data: locationProducts, error: rpcError } = await supabase.rpc(
+        'get_products_by_location',
+        {
+          user_lat: position.latitude,
+          user_lng: position.longitude,
+        }
+      );
 
-    if (error) {
-      console.error('Product search error:', error);
-      return { products: [], keywords, hasResults: false };
+      if (rpcError) {
+        console.error('Location product search error:', rpcError);
+        // Fall back to all products
+      } else {
+        allProducts = (locationProducts as Product[]) || [];
+      }
+    }
+    
+    // Fallback: fetch all available products if no location or RPC failed
+    if (allProducts.length === 0) {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_available', true)
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Product search error:', error);
+        return { products: [], keywords, hasResults: false };
+      }
+      
+      allProducts = data || [];
     }
 
-    if (!allProducts || allProducts.length === 0) {
+    if (allProducts.length === 0) {
       return { products: [], keywords, hasResults: false };
     }
 

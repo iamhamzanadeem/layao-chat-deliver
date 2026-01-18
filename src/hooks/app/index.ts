@@ -5,3 +5,6 @@ export * from './useOrderMessages';
 export * from './useProductSearch';
 export * from './useAddresses';
 export * from './useCreateOrder';
+export * from './useGeolocation';
+export * from './useRestaurants';
+export * from './useLocationProducts';
