@@ -1,20 +1,11 @@
 import { motion } from 'framer-motion';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { MessageCircle, ArrowRight, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 
 export const CTASection = () => {
-  const navigate = useNavigate();
-  const { canInstall, isInstalled, promptInstall } = usePWAInstall();
-
-  const handleInstall = async () => {
-    if (canInstall) {
-      await promptInstall();
-    } else {
-      navigate('/install');
-    }
-  };
+  const { isInstalled, isIOS, promptInstall } = usePWAInstall();
 
   return (
     <section className="py-20 md:py-28">
@@ -55,13 +46,13 @@ export const CTASection = () => {
               
               {!isInstalled && (
                 <Button
-                  onClick={handleInstall}
+                  onClick={promptInstall}
                   size="lg"
                   variant="outline"
                   className="border-white/30 text-white hover:bg-white/10 text-lg px-8 h-14 w-full sm:w-auto"
                 >
                   <Download className="w-5 h-5 mr-2" />
-                  Install App
+                  {isIOS ? 'Add to Home Screen' : 'Install App'}
                 </Button>
               )}
             </div>
