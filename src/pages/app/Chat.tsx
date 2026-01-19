@@ -22,7 +22,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLocation } from '@/contexts/LocationContext';
 import { useProductSearch } from '@/hooks/app/useProductSearch';
 import { useCreateOrder } from '@/hooks/app/useCreateOrder';
-import type { ChatMessage, ProductCardData } from '@/types/chat';
+import { usePopularProducts } from '@/hooks/app/usePopularProducts';
+import { useDealsProducts } from '@/hooks/app/useDealsProducts';
+import { useReorder } from '@/hooks/app/useReorder';
+import type { ChatMessage, ProductCardData, ExtendedProduct } from '@/types/chat';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { AppSidebarMobile } from '@/components/app/AppSidebar';
@@ -52,11 +55,15 @@ const Chat = () => {
     deliveryFee,
     deliveryType,
     deliveryAddress,
+    addItem,
     setDeliveryType,
     setDeliveryAddress 
   } = useOrder();
   const { searchByMessage } = useProductSearch();
   const createOrder = useCreateOrder();
+  const { data: popularProducts, isLoading: isLoadingPopular } = usePopularProducts();
+  const { data: dealsProducts, isLoading: isLoadingDeals } = useDealsProducts();
+  const { reorderLastOrder, hasRecentOrders, isLoading: isLoadingReorder } = useReorder();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   // Show location prompt flag
@@ -151,22 +158,75 @@ const Chat = () => {
     }
   };
 
-  const handleQuickAction = (action: string) => {
+  const handleQuickAction = async (action: string) => {
     if (action === 'browse') {
       setIsBrowsing(true);
       setSelectedCategoryId(null);
     } else if (action === 'popular') {
-      addBotMessage("🔥 Here are our most popular items! Searching for trending products...");
-      setIsBrowsing(true);
+      if (isLoadingPopular) {
+        setIsSearching(true);
+        return;
+      }
+      
+      if (popularProducts && popularProducts.length > 0) {
+        const message: ChatMessage = {
+          id: crypto.randomUUID(),
+          type: 'product_results',
+          content: '',
+          isFromUser: false,
+          createdAt: new Date(),
+          products: popularProducts as ExtendedProduct[],
+          keywords: ['popular', 'trending', 'hot'],
+        };
+        setMessages((prev) => [...prev, message]);
+        addBotMessage("🔥 Here are our most popular items!");
+      } else {
+        addBotMessage("No popular items available right now. Browse our menu to find something you'll love! 🛒");
+        setIsBrowsing(true);
+      }
     } else if (action === 'deals') {
-      addBotMessage("💰 Looking for deals? Check out our special offers!");
-      setIsBrowsing(true);
+      if (isLoadingDeals) {
+        setIsSearching(true);
+        return;
+      }
+      
+      if (dealsProducts && dealsProducts.length > 0) {
+        const message: ChatMessage = {
+          id: crypto.randomUUID(),
+          type: 'product_results',
+          content: '',
+          isFromUser: false,
+          createdAt: new Date(),
+          products: dealsProducts as ExtendedProduct[],
+          keywords: ['deals', 'discount', 'offers'],
+        };
+        setMessages((prev) => [...prev, message]);
+        addBotMessage("💰 Check out these amazing deals!");
+      } else {
+        addBotMessage("No active deals right now. Check back soon for special offers! 🎁");
+        setIsBrowsing(true);
+      }
     } else if (action === 'help') {
       addBotMessage("Need help? You can:\n• Browse Menu - see all products\n• Type what you want\n• Send a photo of items\n• Call us: 0300-1234567");
     } else if (action === 'track') {
       addBotMessage("You can see all your orders in the sidebar on the left. Tap the menu icon to open it! 📋");
     } else if (action === 'reorder') {
-      addBotMessage("Select a previous order from the sidebar to view and reorder items! ↩️");
+      if (isLoadingReorder) {
+        setIsSearching(true);
+        return;
+      }
+      
+      if (hasRecentOrders) {
+        const result = reorderLastOrder();
+        if (result.success) {
+          addBotMessage(`✅ Added ${result.itemCount} item${result.itemCount > 1 ? 's' : ''} from your last order to cart!`);
+        } else {
+          addBotMessage("Couldn't add items to cart. Please try again.");
+        }
+      } else {
+        addBotMessage("You don't have any previous orders yet. Start shopping to create your first order! 🛒");
+        setIsBrowsing(true);
+      }
     }
   };
 

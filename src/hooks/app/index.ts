@@ -8,3 +8,6 @@ export * from './useCreateOrder';
 export * from './useGeolocation';
 export * from './useRestaurants';
 export * from './useLocationProducts';
+export * from './usePopularProducts';
+export * from './useDealsProducts';
+export * from './useReorder';

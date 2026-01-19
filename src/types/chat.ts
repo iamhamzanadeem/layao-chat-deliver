@@ -2,6 +2,9 @@ import type { Tables } from '@/integrations/supabase/types';
 
 export type Product = Tables<'products'>;
 
+// Extended product - uses the base Product type which now includes the new fields
+export type ExtendedProduct = Product;
+
 export type MessageType = 
   | 'text' 
   | 'image' 
@@ -26,7 +29,7 @@ export interface ChatMessage {
   createdAt: Date;
   orderId?: string;
   // For product_results type
-  products?: Product[];
+  products?: ExtendedProduct[];
   keywords?: string[];
 }
 
@@ -37,6 +40,10 @@ export interface ProductCardData {
   unit: string;
   imageUrl?: string;
   description?: string;
+  // Extended fields for deals/popularity
+  isPopular?: boolean;
+  originalPrice?: number | null;
+  discountPercent?: number | null;
 }
 
 export interface OrderSummaryData {

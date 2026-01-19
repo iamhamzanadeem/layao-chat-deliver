@@ -248,10 +248,13 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string | null
+          discount_percent: number | null
           id: string
           image_url: string | null
           is_available: boolean
+          is_popular: boolean | null
           name: string
+          original_price: number | null
           price: number
           restaurant_id: string | null
           search_keywords: string[] | null
@@ -263,10 +266,13 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          discount_percent?: number | null
           id?: string
           image_url?: string | null
           is_available?: boolean
+          is_popular?: boolean | null
           name: string
+          original_price?: number | null
           price: number
           restaurant_id?: string | null
           search_keywords?: string[] | null
@@ -278,10 +284,13 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          discount_percent?: number | null
           id?: string
           image_url?: string | null
           is_available?: boolean
+          is_popular?: boolean | null
           name?: string
+          original_price?: number | null
           price?: number
           restaurant_id?: string | null
           search_keywords?: string[] | null
@@ -797,10 +806,13 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string | null
+          discount_percent: number | null
           id: string
           image_url: string | null
           is_available: boolean
+          is_popular: boolean | null
           name: string
+          original_price: number | null
           price: number
           restaurant_id: string | null
           search_keywords: string[] | null
