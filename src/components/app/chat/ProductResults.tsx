@@ -1,15 +1,13 @@
 import { useState } from 'react';
-import { Plus, Minus, Check, AlertTriangle } from 'lucide-react';
+import { Plus, Minus, Check, AlertTriangle, Flame, Tag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useOrder } from '@/contexts/OrderContext';
-import type { Tables } from '@/integrations/supabase/types';
-
-type Product = Tables<'products'>;
+import type { ExtendedProduct } from '@/types/chat';
 
 interface ProductResultsProps {
-  products: Product[];
+  products: ExtendedProduct[];
   keywords: string[];
 }
 
@@ -30,7 +28,7 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
   const { items, addItem, updateQuantity, removeItem } = useOrder();
   const [justAdded, setJustAdded] = useState<string | null>(null);
 
-  const handleAdd = (product: Product) => {
+  const handleAdd = (product: ExtendedProduct) => {
     addItem({
       productId: product.id,
       name: product.name,
@@ -45,7 +43,7 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
     setTimeout(() => setJustAdded(null), 1000);
   };
 
-  const handleIncrease = (product: Product) => {
+  const handleIncrease = (product: ExtendedProduct) => {
     const existing = items.find((item) => item.productId === product.id);
     if (existing) {
       updateQuantity(product.id, existing.quantity + 1);
@@ -54,7 +52,7 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
     }
   };
 
-  const handleDecrease = (product: Product) => {
+  const handleDecrease = (product: ExtendedProduct) => {
     const existing = items.find((item) => item.productId === product.id);
     if (existing) {
       if (existing.quantity <= 1) {
@@ -82,6 +80,7 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
           const stockInfo = getStockInfo(product.stock_status);
           const isOutOfStock = product.stock_status === 'out_of_stock';
           const wasJustAdded = justAdded === product.id;
+          const hasDiscount = product.discount_percent && product.discount_percent > 0;
           
           return (
             <motion.div
@@ -106,20 +105,43 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
                   </div>
                 )}
                 
-                {/* Stock badge */}
-                {product.stock_status !== 'in_stock' && (
-                  <div className="absolute top-2 left-2">
+                {/* Badges container */}
+                <div className="absolute top-2 left-2 flex flex-col gap-1">
+                  {/* Popular badge */}
+                  {product.is_popular && (
+                    <Badge 
+                      variant="secondary" 
+                      className="bg-orange-500/90 text-white hover:bg-orange-500 gap-0.5 text-[9px] px-1 py-0"
+                    >
+                      <Flame className="w-2.5 h-2.5" />
+                      Hot
+                    </Badge>
+                  )}
+                  
+                  {/* Discount badge */}
+                  {hasDiscount && (
+                    <Badge 
+                      variant="secondary" 
+                      className="bg-success/90 text-white hover:bg-success gap-0.5 text-[9px] px-1 py-0"
+                    >
+                      <Tag className="w-2.5 h-2.5" />
+                      {product.discount_percent}%
+                    </Badge>
+                  )}
+                  
+                  {/* Stock badge */}
+                  {product.stock_status !== 'in_stock' && (
                     <Badge 
                       variant="outline" 
-                      className={`text-[10px] px-1.5 py-0.5 ${stockInfo.color}`}
+                      className={`text-[9px] px-1 py-0 ${stockInfo.color}`}
                     >
                       {stockInfo.variant === 'low_stock' && (
-                        <AlertTriangle className="w-2.5 h-2.5 mr-0.5" />
+                        <AlertTriangle className="w-2 h-2 mr-0.5" />
                       )}
                       {stockInfo.label}
                     </Badge>
-                  </div>
-                )}
+                  )}
+                </div>
 
                 {/* Added checkmark overlay */}
                 <AnimatePresence>
@@ -147,9 +169,16 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
                 <h4 className="font-medium text-sm truncate" title={product.name}>
                   {product.name}
                 </h4>
-                <p className="text-xs text-muted-foreground">
-                  Rs. {Number(product.price).toFixed(0)}/{product.unit}
-                </p>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs text-primary font-medium">
+                    Rs. {Number(product.price).toFixed(0)}/{product.unit}
+                  </span>
+                  {hasDiscount && product.original_price && (
+                    <span className="text-[10px] text-muted-foreground line-through">
+                      Rs. {Number(product.original_price).toFixed(0)}
+                    </span>
+                  )}
+                </div>
                 
                 {/* Add/Quantity Controls */}
                 <div className="mt-2">
