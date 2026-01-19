@@ -63,13 +63,13 @@
     --info-foreground: 0 0% 100%;
     
     /* Sidebar */
-    --sidebar-background: 160 20% 98%;
+    --sidebar-background: 0 0% 99%;
     --sidebar-foreground: 160 10% 25%;
     --sidebar-primary: 160 84% 39%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 160 20% 94%;
+    --sidebar-accent: 160 15% 96%;
     --sidebar-accent-foreground: 160 10% 25%;
-    --sidebar-border: 160 15% 90%;
+    --sidebar-border: 160 10% 92%;
     --sidebar-ring: 160 84% 39%;
   }
 
@@ -185,5 +185,15 @@
   
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+}
+
+/* Shimmer animation for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
   }
 }

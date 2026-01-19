@@ -183,18 +183,34 @@ const SidebarContent = ({
           {isLoading ? (
             <div className="space-y-2 p-2">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="h-20 bg-sidebar-accent animate-pulse rounded-lg" />
+                <div 
+                  key={i} 
+                  className="h-20 rounded-lg bg-gradient-to-r from-sidebar-accent via-sidebar to-sidebar-accent bg-[length:200%_100%] animate-[shimmer_1.5s_ease-in-out_infinite]" 
+                />
               ))}
             </div>
           ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Package className="w-10 h-10 mx-auto mb-3 opacity-40" />
-              <p className="text-sm font-medium">
+            <div className="text-center py-12 px-4">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-sidebar-accent flex items-center justify-center">
+                <Package className="w-8 h-8 text-muted-foreground/50" />
+              </div>
+              <p className="text-sm font-semibold text-sidebar-foreground mb-1">
                 {searchQuery ? 'No matching orders' : 'No orders yet'}
               </p>
-              <p className="text-xs mt-1">
-                {searchQuery ? 'Try a different search' : 'Start your first order!'}
+              <p className="text-xs text-muted-foreground mb-4">
+                {searchQuery ? 'Try a different search term' : 'Start shopping to see your orders here'}
               </p>
+              {!searchQuery && (
+                <Button 
+                  onClick={handleNewOrder}
+                  size="sm"
+                  variant="outline"
+                  className="gap-1.5"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Start Shopping
+                </Button>
+              )}
             </div>
           ) : (
             groupedOrders.map((group) => (
@@ -211,9 +227,10 @@ const SidebarContent = ({
                       key={order.id}
                       onClick={() => handleSelectOrder(order.id)}
                       className={cn(
-                        'w-full text-left p-3 rounded-lg transition-all mb-1.5',
-                        'hover:bg-sidebar-accent',
-                        selectedOrderId === order.id && 'bg-sidebar-accent ring-1 ring-primary/20'
+                        'w-full text-left p-3 rounded-lg mb-1.5',
+                        'transition-all duration-200 ease-out',
+                        'hover:bg-sidebar-accent hover:shadow-sm',
+                        selectedOrderId === order.id && 'bg-sidebar-accent ring-1 ring-primary/20 shadow-sm'
                       )}
                     >
                       <div className="flex items-start justify-between gap-2">
@@ -291,7 +308,7 @@ const SidebarContent = ({
 // Desktop Sidebar
 export const AppSidebarDesktop = ({ selectedOrderId, onSelectOrder }: AppSidebarProps) => {
   return (
-    <aside className="hidden md:flex w-80 border-r border-sidebar-border flex-shrink-0 h-screen">
+    <aside className="hidden md:flex w-80 flex-shrink-0 h-screen shadow-[1px_0_4px_rgba(0,0,0,0.04)]">
       <SidebarContent selectedOrderId={selectedOrderId} onSelectOrder={onSelectOrder} />
     </aside>
   );
