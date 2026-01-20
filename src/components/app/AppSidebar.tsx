@@ -308,7 +308,7 @@ const SidebarContent = ({
 // Desktop Sidebar
 export const AppSidebarDesktop = ({ selectedOrderId, onSelectOrder }: AppSidebarProps) => {
   return (
-    <aside className="hidden md:flex w-80 flex-shrink-0 h-screen shadow-[1px_0_4px_rgba(0,0,0,0.04)]">
+    <aside className="hidden md:flex w-72 lg:w-80 flex-shrink-0 h-screen border-r border-sidebar-border/40 bg-sidebar">
       <SidebarContent selectedOrderId={selectedOrderId} onSelectOrder={onSelectOrder} />
     </aside>
   );

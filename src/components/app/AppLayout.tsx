@@ -34,12 +34,12 @@ const AppLayout = () => {
 
   return (
     <OrderProvider>
-      <div className="min-h-screen bg-background flex">
+      <div className="min-h-screen bg-background flex w-full">
         <AppSidebarDesktop 
           selectedOrderId={selectedOrderId}
           onSelectOrder={setSelectedOrderId}
         />
-        <main className="flex-1 h-screen overflow-hidden">
+        <main className="flex-1 h-screen overflow-hidden bg-background">
           <Outlet context={{ selectedOrderId, onSelectOrder: setSelectedOrderId }} />
         </main>
       </div>
