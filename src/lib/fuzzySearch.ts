@@ -241,8 +241,11 @@ export function isSimilar(
     return true;
   }
   
-  // N-gram similarity check
-  if (ngramSimilarity(inputLower, targetLower) >= 0.4) {
+  // N-gram similarity check with length-based threshold
+  // Shorter words need higher similarity to avoid false positives like "bread" matching "besan"
+  const minNgramThreshold = inputLower.length <= 4 ? 0.55 : 
+                             inputLower.length <= 6 ? 0.45 : 0.4;
+  if (ngramSimilarity(inputLower, targetLower) >= minNgramThreshold) {
     return true;
   }
   

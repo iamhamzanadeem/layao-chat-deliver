@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Plus, MessageSquare, ChevronRight, User, LogOut, Menu, Package, Search } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Plus, ChevronRight, ChevronLeft, LogOut, Menu, Package, Search, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAuth } from '@/contexts/AuthContext';
 import { useUserOrders, groupOrdersByDate } from '@/hooks/app/useUserOrders';
 import { useOrder } from '@/contexts/OrderContext';
@@ -18,6 +19,11 @@ interface AppSidebarProps {
   onSelectOrder: (orderId: string | null) => void;
 }
 
+interface AppSidebarDesktopProps extends AppSidebarProps {
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
 // Status badge configuration
 const statusConfig: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
   pending: { label: 'Pending', variant: 'secondary' },
@@ -26,6 +32,16 @@ const statusConfig: Record<string, { label: string; variant: 'default' | 'second
   on_the_way: { label: 'On the way', variant: 'default' },
   delivered: { label: 'Delivered', variant: 'outline' },
   cancelled: { label: 'Cancelled', variant: 'destructive' },
+};
+
+// Status colors for collapsed view dots
+const statusColors: Record<string, string> = {
+  pending: 'bg-amber-500',
+  confirmed: 'bg-blue-500',
+  preparing: 'bg-purple-500',
+  on_the_way: 'bg-cyan-500',
+  delivered: 'bg-emerald-500',
+  cancelled: 'bg-destructive',
 };
 
 type FilterType = 'all' | 'active' | 'completed';
@@ -305,11 +321,195 @@ const SidebarContent = ({
   );
 };
 
-// Desktop Sidebar
-export const AppSidebarDesktop = ({ selectedOrderId, onSelectOrder }: AppSidebarProps) => {
+// Collapsed Sidebar Content (Mini View)
+const CollapsedSidebarContent = ({ 
+  selectedOrderId, 
+  onSelectOrder,
+  onToggleCollapse,
+}: AppSidebarDesktopProps) => {
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
+  const { data: orders = [] } = useUserOrders();
+  const { clearCart } = useOrder();
+
+  const handleNewOrder = () => {
+    clearCart();
+    onSelectOrder(null);
+  };
+
+  const handleProfile = () => {
+    navigate('/app/profile');
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/app/auth');
+  };
+
+  const getUserInitials = () => {
+    const name = user?.user_metadata?.full_name || user?.phone || 'U';
+    if (name.startsWith('+')) return name.slice(0, 3);
+    return name.split(' ').map((n: string) => n[0]).join('').toUpperCase().slice(0, 2);
+  };
+
+  // Get recent orders for quick access
+  const recentOrders = orders.slice(0, 5);
+
   return (
-    <aside className="hidden md:flex w-72 lg:w-80 flex-shrink-0 h-screen border-r border-sidebar-border/40 bg-sidebar">
-      <SidebarContent selectedOrderId={selectedOrderId} onSelectOrder={onSelectOrder} />
+    <TooltipProvider delayDuration={100}>
+      <div className="flex flex-col h-full bg-sidebar items-center py-4">
+        {/* Logo */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center shadow-md mb-4 cursor-pointer">
+              <span className="text-primary-foreground font-display font-bold text-xl">L</span>
+            </div>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>Layao</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* New Order Button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button 
+              onClick={handleNewOrder}
+              size="icon"
+              className="w-10 h-10 bg-gradient-primary hover:opacity-90 shadow-md mb-4"
+            >
+              <Plus className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>New Order</p>
+          </TooltipContent>
+        </Tooltip>
+
+        <Separator className="w-6 my-2" />
+
+        {/* Recent Orders (as dots/icons) */}
+        <ScrollArea className="flex-1 w-full">
+          <div className="flex flex-col items-center gap-2 px-2">
+            {recentOrders.map((order) => {
+              const statusColor = statusColors[order.status] || 'bg-muted';
+              
+              return (
+                <Tooltip key={order.id}>
+                  <TooltipTrigger asChild>
+                    <button
+                      onClick={() => onSelectOrder(order.id)}
+                      className={cn(
+                        'w-10 h-10 rounded-lg flex items-center justify-center relative',
+                        'transition-all duration-200',
+                        'hover:bg-sidebar-accent',
+                        selectedOrderId === order.id && 'bg-sidebar-accent ring-1 ring-primary/30'
+                      )}
+                    >
+                      <MessageSquare className="w-5 h-5 text-muted-foreground" />
+                      <span className={cn('absolute top-1 right-1 w-2 h-2 rounded-full', statusColor)} />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="right">
+                    <p className="font-medium">{order.order_number}</p>
+                    <p className="text-xs text-muted-foreground">{order.firstItemName}</p>
+                  </TooltipContent>
+                </Tooltip>
+              );
+            })}
+          </div>
+        </ScrollArea>
+
+        {/* Expand Button */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={onToggleCollapse}
+              className="w-10 h-10 mb-2"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>Expand sidebar</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Profile Avatar */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              onClick={handleProfile}
+              className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-sm"
+            >
+              <span className="text-primary-foreground font-semibold text-sm">
+                {getUserInitials()}
+              </span>
+            </button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>{user?.user_metadata?.full_name || 'Profile'}</p>
+          </TooltipContent>
+        </Tooltip>
+
+        {/* Sign Out */}
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="w-10 h-10 mt-2 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+              onClick={handleSignOut}
+            >
+              <LogOut className="w-4 h-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="right">
+            <p>Sign out</p>
+          </TooltipContent>
+        </Tooltip>
+      </div>
+    </TooltipProvider>
+  );
+};
+
+// Desktop Sidebar
+export const AppSidebarDesktop = ({ 
+  selectedOrderId, 
+  onSelectOrder, 
+  collapsed = false,
+  onToggleCollapse,
+}: AppSidebarDesktopProps) => {
+  return (
+    <aside 
+      className={cn(
+        "hidden md:flex flex-shrink-0 h-screen bg-sidebar transition-all duration-300 ease-in-out",
+        collapsed ? "w-16" : "w-72 lg:w-80"
+      )}
+    >
+      {collapsed ? (
+        <CollapsedSidebarContent 
+          selectedOrderId={selectedOrderId} 
+          onSelectOrder={onSelectOrder}
+          collapsed={collapsed}
+          onToggleCollapse={onToggleCollapse}
+        />
+      ) : (
+        <div className="flex flex-col h-full w-full relative">
+          {/* Collapse Button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onToggleCollapse}
+            className="absolute top-4 right-2 z-10 w-7 h-7 rounded-full bg-sidebar-accent/80 hover:bg-sidebar-accent"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </Button>
+          <SidebarContent selectedOrderId={selectedOrderId} onSelectOrder={onSelectOrder} />
+        </div>
+      )}
     </aside>
   );
 };

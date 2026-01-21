@@ -10,6 +10,7 @@ const AppLayout = () => {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -38,6 +39,8 @@ const AppLayout = () => {
         <AppSidebarDesktop 
           selectedOrderId={selectedOrderId}
           onSelectOrder={setSelectedOrderId}
+          collapsed={sidebarCollapsed}
+          onToggleCollapse={() => setSidebarCollapsed(!sidebarCollapsed)}
         />
         <main className="flex-1 h-screen overflow-hidden bg-background">
           <Outlet context={{ selectedOrderId, onSelectOrder: setSelectedOrderId }} />

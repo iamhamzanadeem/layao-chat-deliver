@@ -141,14 +141,35 @@ function calculateProductScore(product: Product, keywords: string[]): number {
       if (searchKeywords.some(sk => sk.toLowerCase() === keywordLower)) {
         bestKeywordScore = Math.max(bestKeywordScore, 8);
       }
-      // Fuzzy keyword match
-      else if (hasMatchingKeyword(keywordLower, searchKeywords)) {
-        bestKeywordScore = Math.max(bestKeywordScore, 6);
-      }
-      // Phonetic match in keywords
+      // Fuzzy keyword match - only accept if the match is strong enough
       else {
-        const phoneticKeywordScore = getBestPhoneticScore(keywordLower, searchKeywords);
-        bestKeywordScore = Math.max(bestKeywordScore, phoneticKeywordScore);
+        // Check each search keyword individually with stricter matching
+        let foundStrongMatch = false;
+        for (const sk of searchKeywords) {
+          const skLower = sk.toLowerCase();
+          
+          // Length ratio guard to prevent short word false positives
+          const lengthRatio = Math.min(keywordLower.length, skLower.length) / 
+                              Math.max(keywordLower.length, skLower.length);
+          if (lengthRatio < 0.6) continue; // Stricter ratio for keywords
+          
+          // Use getSimilarityScore for more accurate matching
+          const score = getSimilarityScore(keywordLower, skLower);
+          if (score >= SCORE_THRESHOLD.MINIMUM) {
+            foundStrongMatch = true;
+            bestKeywordScore = Math.max(bestKeywordScore, Math.min(score, 6));
+            break;
+          }
+        }
+        
+        // Fallback to phonetic matching only if no strong fuzzy match found
+        if (!foundStrongMatch) {
+          const phoneticKeywordScore = getBestPhoneticScore(keywordLower, searchKeywords);
+          // Only accept high-confidence phonetic matches
+          if (phoneticKeywordScore >= SCORE_THRESHOLD.MINIMUM) {
+            bestKeywordScore = Math.max(bestKeywordScore, phoneticKeywordScore);
+          }
+        }
       }
     }
     
