@@ -119,6 +119,7 @@ const Chat = () => {
         createdAt: new Date(),
         products: searchResult.products,
         keywords: searchResult.keywords,
+        groupedProducts: searchResult.groupedProducts,
       };
       setMessages((prev) => [...prev, productResultsMessage]);
     } else if (searchResult.keywords.length > 0) {

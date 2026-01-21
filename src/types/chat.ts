@@ -31,6 +31,8 @@ export interface ChatMessage {
   // For product_results type
   products?: ExtendedProduct[];
   keywords?: string[];
+  // Grouped products by matched search term (e.g., "egg" -> [egg products], "bread" -> [bread products])
+  groupedProducts?: Record<string, ExtendedProduct[]>;
 }
 
 export interface ProductCardData {
