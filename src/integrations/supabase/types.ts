@@ -258,6 +258,7 @@ export type Database = {
           price: number
           restaurant_id: string | null
           search_keywords: string[] | null
+          search_vector: unknown
           stock_status: string
           unit: string
           updated_at: string
@@ -276,6 +277,7 @@ export type Database = {
           price: number
           restaurant_id?: string | null
           search_keywords?: string[] | null
+          search_vector?: unknown
           stock_status?: string
           unit?: string
           updated_at?: string
@@ -294,6 +296,7 @@ export type Database = {
           price?: number
           restaurant_id?: string | null
           search_keywords?: string[] | null
+          search_vector?: unknown
           stock_status?: string
           unit?: string
           updated_at?: string
@@ -816,6 +819,7 @@ export type Database = {
           price: number
           restaurant_id: string | null
           search_keywords: string[] | null
+          search_vector: unknown
           stock_status: string
           unit: string
           updated_at: string
@@ -876,6 +880,33 @@ export type Database = {
       }
       postgis_version: { Args: never; Returns: string }
       postgis_wagyu_version: { Args: never; Returns: string }
+      search_products: {
+        Args: {
+          result_limit?: number
+          search_query: string
+          user_lat?: number
+          user_lng?: number
+        }
+        Returns: {
+          category_id: string
+          description: string
+          discount_percent: number
+          id: string
+          image_url: string
+          is_available: boolean
+          is_popular: boolean
+          name: string
+          original_price: number
+          price: number
+          relevance_score: number
+          restaurant_id: string
+          search_keywords: string[]
+          stock_status: string
+          unit: string
+        }[]
+      }
+      show_limit: { Args: never; Returns: number }
+      show_trgm: { Args: { "": string }; Returns: string[] }
       st_3dclosestpoint: {
         Args: { geom1: unknown; geom2: unknown }
         Returns: unknown
@@ -1457,6 +1488,7 @@ export type Database = {
         Args: { geom: unknown; move: number; wrap: number }
         Returns: unknown
       }
+      unaccent: { Args: { "": string }; Returns: string }
       unlockrows: { Args: { "": string }; Returns: number }
       updategeometrysrid: {
         Args: {
