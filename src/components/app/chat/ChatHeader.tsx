@@ -32,7 +32,7 @@ const ChatHeader = ({
   onOpenCart,
 }: ChatHeaderProps) => {
   return (
-    <header className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border px-4 h-16 flex items-center justify-between">
+    <header className="sticky top-0 z-40 bg-sidebar backdrop-blur-sm border-b border-sidebar-border px-4 h-16 flex items-center justify-between">
       <div className="flex items-center gap-3">
         <AppSidebarMobile 
           selectedOrderId={selectedOrderId} 
