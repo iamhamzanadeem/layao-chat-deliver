@@ -27,6 +27,7 @@ const MessageRenderer = ({ message }: MessageRendererProps) => {
           <ProductResults 
             products={message.products} 
             keywords={message.keywords || []} 
+            groupedProducts={message.groupedProducts}
           />
         );
       }

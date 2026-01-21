@@ -4,12 +4,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useOrder } from '@/contexts/OrderContext';
-import { fadeInScale, staggerContainer, springTransition } from '@/lib/animations';
 import type { ExtendedProduct } from '@/types/chat';
 
 interface ProductResultsProps {
   products: ExtendedProduct[];
   keywords: string[];
+  groupedProducts?: Record<string, ExtendedProduct[]>;
 }
 
 type StockStatus = 'in_stock' | 'low_stock' | 'out_of_stock';
@@ -30,6 +30,45 @@ const getStockInfo = (status: string): StockInfo => {
     default:
       return { label: 'In Stock', variant: 'in_stock', color: 'text-success bg-success/10 border-success/20' };
   }
+};
+
+// Emoji mapping for common product categories
+const getTermEmoji = (term: string): string => {
+  const emojiMap: Record<string, string> = {
+    egg: '🥚',
+    eggs: '🥚',
+    bread: '🍞',
+    milk: '🥛',
+    chicken: '🍗',
+    meat: '🥩',
+    fish: '🐟',
+    fruit: '🍎',
+    fruits: '🍎',
+    vegetable: '🥬',
+    vegetables: '🥬',
+    rice: '🍚',
+    juice: '🧃',
+    water: '💧',
+    cheese: '🧀',
+    butter: '🧈',
+    oil: '🫒',
+    sugar: '🍬',
+    salt: '🧂',
+    tomato: '🍅',
+    potato: '🥔',
+    onion: '🧅',
+    apple: '🍎',
+    banana: '🍌',
+    orange: '🍊',
+  };
+  
+  const lowerTerm = term.toLowerCase();
+  for (const [key, emoji] of Object.entries(emojiMap)) {
+    if (lowerTerm.includes(key)) {
+      return emoji;
+    }
+  }
+  return '🛒';
 };
 
 interface ProductItemProps {
@@ -321,7 +360,22 @@ const ProductGridItem = ({ product, quantity, wasJustAdded, onAdd, onIncrease, o
   );
 };
 
-const ProductResults = ({ products, keywords }: ProductResultsProps) => {
+// Section header for grouped results
+const GroupHeader = ({ term, count }: { term: string; count: number }) => (
+  <motion.div
+    initial={{ opacity: 0, y: -5 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="flex items-center gap-2 mb-2"
+  >
+    <span className="text-lg">{getTermEmoji(term)}</span>
+    <h3 className="font-medium text-sm capitalize text-foreground">{term}</h3>
+    <Badge variant="secondary" className="text-[10px] h-4 px-1.5">
+      {count} item{count !== 1 ? 's' : ''}
+    </Badge>
+  </motion.div>
+);
+
+const ProductResults = ({ products, keywords, groupedProducts }: ProductResultsProps) => {
   const { items, addItem, updateQuantity, removeItem } = useOrder();
   const [justAdded, setJustAdded] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
@@ -365,6 +419,48 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
     return item?.quantity || 0;
   };
 
+  // Render products for a section (grouped or flat)
+  const renderProductList = (sectionProducts: ExtendedProduct[], startIndex = 0) => {
+    if (viewMode === 'list') {
+      return (
+        <div className="flex flex-col gap-2">
+          {sectionProducts.map((product, index) => (
+            <ProductListItem
+              key={product.id}
+              product={product}
+              quantity={getQuantity(product.id)}
+              wasJustAdded={justAdded === product.id}
+              onAdd={() => handleAdd(product)}
+              onIncrease={() => handleIncrease(product)}
+              onDecrease={() => handleDecrease(product)}
+              index={startIndex + index}
+            />
+          ))}
+        </div>
+      );
+    }
+
+    return (
+      <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide">
+        {sectionProducts.map((product, index) => (
+          <ProductGridItem
+            key={product.id}
+            product={product}
+            quantity={getQuantity(product.id)}
+            wasJustAdded={justAdded === product.id}
+            onAdd={() => handleAdd(product)}
+            onIncrease={() => handleIncrease(product)}
+            onDecrease={() => handleDecrease(product)}
+            index={startIndex + index}
+          />
+        ))}
+      </div>
+    );
+  };
+
+  // Check if we should show grouped view
+  const hasGroupedResults = groupedProducts && Object.keys(groupedProducts).length > 1;
+
   return (
     <div className="bg-muted/30 rounded-2xl rounded-tl-sm p-3 max-w-[90%]">
       {/* Header with view toggle */}
@@ -394,53 +490,30 @@ const ProductResults = ({ products, keywords }: ProductResultsProps) => {
         </div>
       </div>
       
-      {/* Product display - List or Grid */}
+      {/* Product display - Grouped or Flat */}
       <AnimatePresence mode="wait">
-        {viewMode === 'list' ? (
-          <motion.div
-            key="list"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="flex flex-col gap-2"
-          >
-            {products.map((product, index) => (
-              <ProductListItem
-                key={product.id}
-                product={product}
-                quantity={getQuantity(product.id)}
-                wasJustAdded={justAdded === product.id}
-                onAdd={() => handleAdd(product)}
-                onIncrease={() => handleIncrease(product)}
-                onDecrease={() => handleDecrease(product)}
-                index={index}
-              />
-            ))}
-          </motion.div>
-        ) : (
-          <motion.div
-            key="grid"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
-            className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-hide"
-          >
-            {products.map((product, index) => (
-              <ProductGridItem
-                key={product.id}
-                product={product}
-                quantity={getQuantity(product.id)}
-                wasJustAdded={justAdded === product.id}
-                onAdd={() => handleAdd(product)}
-                onIncrease={() => handleIncrease(product)}
-                onDecrease={() => handleDecrease(product)}
-                index={index}
-              />
-            ))}
-          </motion.div>
-        )}
+        <motion.div
+          key={viewMode}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.15 }}
+        >
+          {hasGroupedResults ? (
+            // Grouped view - separate sections for each search term
+            <div className="space-y-4">
+              {Object.entries(groupedProducts).map(([term, termProducts], groupIndex) => (
+                <div key={term}>
+                  <GroupHeader term={term} count={termProducts.length} />
+                  {renderProductList(termProducts, groupIndex * 10)}
+                </div>
+              ))}
+            </div>
+          ) : (
+            // Flat list - single section
+            renderProductList(products)
+          )}
+        </motion.div>
       </AnimatePresence>
     </div>
   );

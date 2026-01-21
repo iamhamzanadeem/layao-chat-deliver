@@ -895,6 +895,7 @@ export type Database = {
           image_url: string
           is_available: boolean
           is_popular: boolean
+          matched_term: string
           name: string
           original_price: number
           price: number

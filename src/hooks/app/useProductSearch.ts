@@ -5,10 +5,17 @@ import { extractProductKeywords, isProductRequest } from '@/lib/productSearch';
 
 type Product = Tables<'products'>;
 
+// Extended product with matched term from search
+interface ProductWithMatch extends Product {
+  matched_term?: string;
+}
+
 interface SearchResult {
   products: Product[];
   keywords: string[];
   hasResults: boolean;
+  // Grouped products by search term (e.g., "egg" -> products, "bread" -> products)
+  groupedProducts?: Record<string, Product[]>;
 }
 
 interface CacheEntry {
@@ -28,6 +35,7 @@ const MAX_CACHE_SIZE = 50;
  * - Trigram similarity for typo tolerance (threshold 0.25)
  * - Indexed GIN/GiST queries for O(log n) performance
  * - Result caching for repeated queries
+ * - Grouped results by matched search term
  * 
  * Performance: 85-95% faster than client-side scoring
  * Accuracy: 80% reduction in false positives
@@ -67,6 +75,27 @@ export const useProductSearch = () => {
   }, []);
 
   /**
+   * Groups products by their matched search term
+   */
+  const groupProductsByTerm = useCallback((
+    items: ProductWithMatch[]
+  ): Record<string, Product[]> => {
+    const groups: Record<string, Product[]> = {};
+    
+    for (const item of items) {
+      const term = item.matched_term || 'other';
+      if (!groups[term]) {
+        groups[term] = [];
+      }
+      // Remove matched_term before adding to group
+      const { matched_term, ...product } = item;
+      groups[term].push(product as Product);
+    }
+    
+    return groups;
+  }, []);
+
+  /**
    * Search products using PostgreSQL FTS + Trigram matching
    * Single database call replaces all client-side scoring logic
    */
@@ -101,8 +130,8 @@ export const useProductSearch = () => {
       return { products: [], keywords, hasResults: false };
     }
 
-    // Map RPC result to Product type (RPC returns relevance_score which we discard)
-    const products: Product[] = (data || []).map((item: Record<string, unknown>) => ({
+    // Map RPC result to Product type with matched_term
+    const productsWithMatch: ProductWithMatch[] = (data || []).map((item: Record<string, unknown>) => ({
       id: item.id as string,
       name: item.name as string,
       description: item.description as string | null,
@@ -120,12 +149,20 @@ export const useProductSearch = () => {
       created_at: '', // Not returned by RPC, set default
       updated_at: '', // Not returned by RPC, set default
       search_vector: null, // Internal field, not needed in UI
+      matched_term: item.matched_term as string | undefined,
     }));
+
+    // Group products by matched term
+    const groupedProducts = groupProductsByTerm(productsWithMatch);
+    
+    // Flat list of products (without matched_term)
+    const products: Product[] = productsWithMatch.map(({ matched_term, ...product }) => product as Product);
 
     const result: SearchResult = {
       products,
       keywords,
       hasResults: products.length > 0,
+      groupedProducts: Object.keys(groupedProducts).length > 1 ? groupedProducts : undefined,
     };
 
     // Cache the result
@@ -135,7 +172,7 @@ export const useProductSearch = () => {
     });
 
     return result;
-  }, [getCacheKey, cleanCache]);
+  }, [getCacheKey, cleanCache, groupProductsByTerm]);
 
   /**
    * Check if a message appears to be a product request
