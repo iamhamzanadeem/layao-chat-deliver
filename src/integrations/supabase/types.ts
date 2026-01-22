@@ -103,6 +103,83 @@ export type Database = {
           },
         ]
       }
+      errand_orders: {
+        Row: {
+          admin_notes: string | null
+          approval_status: string
+          approved_at: string | null
+          approved_by: string | null
+          base_fee: number
+          created_at: string
+          distance_fee: number | null
+          distance_km: number | null
+          estimated_total: number
+          final_price: number | null
+          id: string
+          order_id: string
+          pickup_address: string
+          pickup_contact_name: string | null
+          pickup_contact_phone: string | null
+          pickup_lat: number | null
+          pickup_lng: number | null
+          task_description: string
+          task_type: string
+          updated_at: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          base_fee?: number
+          created_at?: string
+          distance_fee?: number | null
+          distance_km?: number | null
+          estimated_total: number
+          final_price?: number | null
+          id?: string
+          order_id: string
+          pickup_address: string
+          pickup_contact_name?: string | null
+          pickup_contact_phone?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          task_description: string
+          task_type?: string
+          updated_at?: string
+        }
+        Update: {
+          admin_notes?: string | null
+          approval_status?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          base_fee?: number
+          created_at?: string
+          distance_fee?: number | null
+          distance_km?: number | null
+          estimated_total?: number
+          final_price?: number | null
+          id?: string
+          order_id?: string
+          pickup_address?: string
+          pickup_contact_name?: string | null
+          pickup_contact_phone?: string | null
+          pickup_lat?: number | null
+          pickup_lng?: number | null
+          task_description?: string
+          task_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "errand_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           content: string | null
@@ -206,6 +283,8 @@ export type Database = {
           id: string
           notes: string | null
           order_number: string
+          order_type: string
+          restaurant_id: string | null
           status: Database["public"]["Enums"]["order_status"]
           subtotal: number
           total: number
@@ -221,6 +300,8 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number: string
+          order_type?: string
+          restaurant_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal: number
           total: number
@@ -236,10 +317,47 @@ export type Database = {
           id?: string
           notes?: string | null
           order_number?: string
+          order_type?: string
+          restaurant_id?: string | null
           status?: Database["public"]["Enums"]["order_status"]
           subtotal?: number
           total?: number
           user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "restaurants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pricing_config: {
+        Row: {
+          config_key: string
+          config_value: Json
+          created_at: string | null
+          description: string | null
+          id: string
+          updated_at: string | null
+        }
+        Insert: {
+          config_key: string
+          config_value: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          updated_at?: string | null
+        }
+        Update: {
+          config_key?: string
+          config_value?: Json
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -383,12 +501,16 @@ export type Database = {
       restaurants: {
         Row: {
           address: string
+          average_prep_time: number | null
           closing_time: string | null
+          commission_percent: number | null
           created_at: string
+          cuisine_type: string | null
           delivery_radius_km: number
           description: string | null
           id: string
           image_url: string | null
+          is_accepting_orders: boolean | null
           is_active: boolean
           latitude: number
           location: unknown
@@ -396,17 +518,22 @@ export type Database = {
           name: string
           opening_time: string | null
           phone: string | null
+          restaurant_type: string
           slug: string
           updated_at: string
         }
         Insert: {
           address: string
+          average_prep_time?: number | null
           closing_time?: string | null
+          commission_percent?: number | null
           created_at?: string
+          cuisine_type?: string | null
           delivery_radius_km?: number
           description?: string | null
           id?: string
           image_url?: string | null
+          is_accepting_orders?: boolean | null
           is_active?: boolean
           latitude: number
           location?: unknown
@@ -414,17 +541,22 @@ export type Database = {
           name: string
           opening_time?: string | null
           phone?: string | null
+          restaurant_type?: string
           slug: string
           updated_at?: string
         }
         Update: {
           address?: string
+          average_prep_time?: number | null
           closing_time?: string | null
+          commission_percent?: number | null
           created_at?: string
+          cuisine_type?: string | null
           delivery_radius_km?: number
           description?: string | null
           id?: string
           image_url?: string | null
+          is_accepting_orders?: boolean | null
           is_active?: boolean
           latitude?: number
           location?: unknown
@@ -432,6 +564,7 @@ export type Database = {
           name?: string
           opening_time?: string | null
           phone?: string | null
+          restaurant_type?: string
           slug?: string
           updated_at?: string
         }
@@ -652,6 +785,20 @@ export type Database = {
             }
             Returns: string
           }
+      calculate_errand_price: {
+        Args: {
+          p_delivery_lat: number
+          p_delivery_lng: number
+          p_pickup_lat: number
+          p_pickup_lng: number
+        }
+        Returns: {
+          base_fee: number
+          distance_fee: number
+          distance_km: number
+          total_fee: number
+        }[]
+      }
       disablelongtransactions: { Args: never; Returns: string }
       dropgeometrycolumn:
         | {

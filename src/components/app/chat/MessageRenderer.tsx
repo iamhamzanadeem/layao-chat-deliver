@@ -2,6 +2,7 @@ import ChatBubble from './ChatBubble';
 import ProductCard from './ProductCard';
 import ProductResults from './ProductResults';
 import OrderPlaced from './OrderPlaced';
+import ErrandSubmitted from './ErrandSubmitted';
 import type { ChatMessage, ProductCardData } from '@/types/chat';
 import type { DeliveryType } from '@/contexts/OrderContext';
 
@@ -41,11 +42,17 @@ const MessageRenderer = ({ message }: MessageRendererProps) => {
         />
       );
 
+    case 'errand_submitted':
+      return <ErrandSubmitted orderNumber={message.content} />;
+
     case 'text':
     case 'bot':
     case 'delivery_type_select':
     case 'address_select':
     case 'order_confirmation':
+    case 'errand_task_type':
+    case 'errand_details':
+    case 'errand_price_estimate':
     default:
       return (
         <ChatBubble

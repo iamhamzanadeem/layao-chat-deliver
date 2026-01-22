@@ -6,7 +6,9 @@ import {
   MapPin, 
   HelpCircle, 
   Flame,
-  Percent 
+  Percent,
+  Utensils,
+  Truck
 } from 'lucide-react';
 import { useRef, useState, useEffect } from 'react';
 
@@ -16,6 +18,8 @@ interface QuickActionsProps {
 
 const quickActions = [
   { id: 'browse', icon: ShoppingBag, label: 'Browse Menu', highlight: true },
+  { id: 'restaurant', icon: Utensils, label: 'Restaurants' },
+  { id: 'errand', icon: Truck, label: 'Get Job Done' },
   { id: 'popular', icon: Flame, label: 'Popular' },
   { id: 'deals', icon: Percent, label: 'Deals' },
   { id: 'reorder', icon: RotateCcw, label: 'Reorder' },
