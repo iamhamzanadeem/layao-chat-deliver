@@ -18,7 +18,17 @@ export type MessageType =
   | 'delivery_type_select'
   | 'address_select'
   | 'order_confirmation'
-  | 'order_placed';
+  | 'order_placed'
+  // Errand-related message types
+  | 'errand_task_type'
+  | 'errand_details'
+  | 'errand_price_estimate'
+  | 'errand_submitted'
+  // Partner restaurant message types
+  | 'restaurant_list'
+  | 'restaurant_menu'
+  // Out of range prompt
+  | 'out_of_range_prompt';
 
 export interface ChatMessage {
   id: string;
