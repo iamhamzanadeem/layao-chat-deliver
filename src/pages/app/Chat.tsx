@@ -8,6 +8,7 @@ import { usePopularProducts } from '@/hooks/app/usePopularProducts';
 import { useDealsProducts } from '@/hooks/app/useDealsProducts';
 import { useReorder } from '@/hooks/app/useReorder';
 import { useCheckoutFlow } from '@/hooks/app/useCheckoutFlow';
+import { useErrandFlow } from '@/hooks/app/useErrandFlow';
 import type { ChatMessage, ExtendedProduct } from '@/types/chat';
 
 // Components
@@ -75,6 +76,24 @@ const Chat = () => {
     onOpenCart: setCartOpen,
   });
 
+  // Errand flow hook
+  const {
+    errandStep,
+    isErrandActive,
+    errandDetails,
+    deliveryAddress: errandDeliveryAddress,
+    priceEstimate,
+    isCalculatingPrice,
+    isSubmitting: isErrandSubmitting,
+    startErrandFlow,
+    handleTaskTypeSelect,
+    handleDetailsSubmit,
+    handleAddressSelect: handleErrandAddressSelect,
+    handleSubmitErrand,
+    handleEditDetails,
+    cancelErrandFlow,
+  } = useErrandFlow({ onAddMessage: handleAddMessage });
+
   // Reset browse mode when selecting an order
   useEffect(() => {
     if (selectedOrderId) {
@@ -135,6 +154,12 @@ const Chat = () => {
     if (action === 'browse') {
       setIsBrowsing(true);
       setSelectedCategoryId(null);
+    } else if (action === 'errand') {
+      // Start errand flow
+      startErrandFlow();
+    } else if (action === 'restaurant') {
+      // Partner restaurants - coming soon
+      addBotMessage("🍽️ Partner restaurants coming soon! Use 'Get Job Done' to order from any restaurant in the city.");
     } else if (action === 'popular') {
       if (isLoadingPopular) {
         setIsSearching(true);
@@ -180,7 +205,7 @@ const Chat = () => {
         setIsBrowsing(true);
       }
     } else if (action === 'help') {
-      addBotMessage("Need help? You can:\n• Browse Menu - see all products\n• Type what you want\n• Send a photo of items\n• Call us: 0300-1234567");
+      addBotMessage("Need help? You can:\n• Browse Menu - see all products\n• Get Job Done - any errand service\n• Type what you want\n• Call us: 0300-1234567");
     } else if (action === 'track') {
       addBotMessage("You can see all your orders in the sidebar on the left. Tap the menu icon to open it! 📋");
     } else if (action === 'reorder') {
@@ -210,6 +235,7 @@ const Chat = () => {
     hasRecentOrders,
     reorderLastOrder,
     addBotMessage,
+    startErrandFlow,
   ]);
 
   const closeBrowseMode = useCallback(() => {
@@ -249,6 +275,18 @@ const Chat = () => {
         onAddressSelect={handleAddressSelect}
         onConfirmOrder={handleConfirmOrder}
         onEditCart={handleEditCart}
+        // Errand props
+        errandStep={errandStep}
+        errandDetails={errandDetails}
+        errandDeliveryAddress={errandDeliveryAddress}
+        priceEstimate={priceEstimate}
+        isCalculatingPrice={isCalculatingPrice}
+        isErrandSubmitting={isErrandSubmitting}
+        onTaskTypeSelect={handleTaskTypeSelect}
+        onDetailsSubmit={handleDetailsSubmit}
+        onErrandAddressSelect={handleErrandAddressSelect}
+        onSubmitErrand={handleSubmitErrand}
+        onEditDetails={handleEditDetails}
       />
 
       {/* Input Area (Quick Actions + Cart Preview + Chat Input) */}
