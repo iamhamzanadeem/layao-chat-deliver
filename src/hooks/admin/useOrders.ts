@@ -6,6 +6,7 @@ import { useToast } from '@/hooks/use-toast';
 
 type Order = Tables<'orders'>;
 type OrderStatus = Enums<'order_status'>;
+type OrderType = 'inventory' | 'restaurant' | 'errand';
 
 interface OrderWithProfile extends Order {
   profile?: {
@@ -18,14 +19,15 @@ interface OrderWithProfile extends Order {
 
 interface UseOrdersOptions {
   status?: OrderStatus | 'all';
+  orderType?: OrderType | 'all';
 }
 
 export const useOrders = (options: UseOrdersOptions = {}) => {
-  const { status = 'all' } = options;
+  const { status = 'all', orderType = 'all' } = options;
   const queryClient = useQueryClient();
 
   const query = useQuery({
-    queryKey: ['admin-orders', status],
+    queryKey: ['admin-orders', status, orderType],
     queryFn: async () => {
       let q = supabase
         .from('orders')
@@ -34,6 +36,10 @@ export const useOrders = (options: UseOrdersOptions = {}) => {
 
       if (status !== 'all') {
         q = q.eq('status', status);
+      }
+
+      if (orderType !== 'all') {
+        q = q.eq('order_type', orderType);
       }
 
       const { data: orders, error } = await q;

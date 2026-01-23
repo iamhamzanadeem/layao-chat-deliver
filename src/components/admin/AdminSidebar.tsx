@@ -9,6 +9,7 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
+  Truck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -23,6 +24,7 @@ const navItems = [
   { title: 'Products', url: '/admin/products', icon: Package },
   { title: 'Categories', url: '/admin/categories', icon: FolderTree },
   { title: 'Orders', url: '/admin/orders', icon: ClipboardList },
+  { title: 'Errands', url: '/admin/errands', icon: Truck },
   { title: 'Customers', url: '/admin/customers', icon: Users },
   { title: 'Analytics', url: '/admin/analytics', icon: BarChart3 },
 ];

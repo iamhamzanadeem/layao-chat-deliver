@@ -5,20 +5,38 @@ import TypingIndicator from './TypingIndicator';
 import DeliveryTypeSelector from './DeliveryTypeSelector';
 import AddressSelector from './AddressSelector';
 import OrderConfirmation from './OrderConfirmation';
+import ErrandTaskTypeSelector from './ErrandTaskTypeSelector';
+import ErrandDetailsForm from './ErrandDetailsForm';
+import ErrandPriceEstimateComponent from './ErrandPriceEstimate';
 import type { ChatMessage } from '@/types/chat';
 import type { CheckoutStep } from '@/hooks/app/useCheckoutFlow';
+import type { ErrandStep } from '@/hooks/app/useErrandFlow';
 import type { DeliveryType, DeliveryAddress } from '@/contexts/OrderContext';
+import type { ErrandTaskType, ErrandDetails, ErrandPriceEstimate } from '@/types/errand';
 import { messageVariants, fadeInUp, springTransition } from '@/lib/animations';
 
 interface MessageListProps {
   messages: ChatMessage[];
   isSearching: boolean;
+  // Checkout props
   checkoutStep: CheckoutStep;
   isConfirming: boolean;
   onDeliveryTypeSelect: (type: DeliveryType) => void;
   onAddressSelect: (address: DeliveryAddress) => void;
   onConfirmOrder: () => void;
   onEditCart: () => void;
+  // Errand props
+  errandStep: ErrandStep;
+  errandDetails: ErrandDetails | null;
+  errandDeliveryAddress: DeliveryAddress | null;
+  priceEstimate: ErrandPriceEstimate | null;
+  isCalculatingPrice: boolean;
+  isErrandSubmitting: boolean;
+  onTaskTypeSelect: (type: ErrandTaskType) => void;
+  onDetailsSubmit: (details: ErrandDetails) => void;
+  onErrandAddressSelect: (address: DeliveryAddress) => void;
+  onSubmitErrand: () => void;
+  onEditDetails: () => void;
 }
 
 const MessageList = ({
@@ -30,6 +48,18 @@ const MessageList = ({
   onAddressSelect,
   onConfirmOrder,
   onEditCart,
+  // Errand props
+  errandStep,
+  errandDetails,
+  errandDeliveryAddress,
+  priceEstimate,
+  isCalculatingPrice,
+  isErrandSubmitting,
+  onTaskTypeSelect,
+  onDetailsSubmit,
+  onErrandAddressSelect,
+  onSubmitErrand,
+  onEditDetails,
 }: MessageListProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -39,7 +69,7 @@ const MessageList = ({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, checkoutStep]);
+  }, [messages, checkoutStep, errandStep]);
 
   const renderCheckoutStep = () => {
     switch (checkoutStep) {
@@ -55,6 +85,40 @@ const MessageList = ({
             isLoading={isConfirming}
           />
         );
+      default:
+        return null;
+    }
+  };
+
+  const renderErrandStep = () => {
+    switch (errandStep) {
+      case 'task_type':
+        return <ErrandTaskTypeSelector onSelect={onTaskTypeSelect} />;
+      case 'details':
+        return (
+          <ErrandDetailsForm 
+            taskType={errandDetails?.taskType || 'custom'} 
+            onSubmit={onDetailsSubmit}
+            onBack={() => {/* Reset handled by hook */}}
+          />
+        );
+      case 'address':
+        return <AddressSelector onSelect={onErrandAddressSelect} />;
+      case 'price_estimate':
+        if (errandDetails && errandDeliveryAddress) {
+          return (
+            <ErrandPriceEstimateComponent
+              errandDetails={errandDetails}
+              deliveryAddress={errandDeliveryAddress}
+              priceEstimate={priceEstimate}
+              isCalculating={isCalculatingPrice}
+              onConfirm={onSubmitErrand}
+              onEdit={onEditDetails}
+              isSubmitting={isErrandSubmitting}
+            />
+          );
+        }
+        return null;
       default:
         return null;
     }
@@ -102,6 +166,18 @@ const MessageList = ({
           className="mt-2"
         >
           {renderCheckoutStep()}
+        </motion.div>
+      )}
+
+      {/* Errand Step Component */}
+      {errandStep !== 'idle' && errandStep !== 'submitted' && (
+        <motion.div
+          variants={fadeInUp}
+          initial="initial"
+          animate="animate"
+          className="mt-2"
+        >
+          {renderErrandStep()}
         </motion.div>
       )}
       

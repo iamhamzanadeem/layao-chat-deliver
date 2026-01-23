@@ -22,6 +22,7 @@ import Dashboard from "./pages/admin/Dashboard";
 import Products from "./pages/admin/Products";
 import Categories from "./pages/admin/Categories";
 import Orders from "./pages/admin/Orders";
+import Errands from "./pages/admin/Errands";
 import Customers from "./pages/admin/Customers";
 import Analytics from "./pages/admin/Analytics";
 
@@ -60,6 +61,7 @@ const App = () => (
                 <Route path="products" element={<Products />} />
                 <Route path="categories" element={<Categories />} />
                 <Route path="orders" element={<Orders />} />
+                <Route path="errands" element={<Errands />} />
                 <Route path="customers" element={<Customers />} />
                 <Route path="analytics" element={<Analytics />} />
               </Route>
