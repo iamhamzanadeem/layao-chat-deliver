@@ -53,6 +53,10 @@ const Chat = () => {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [cartOpen, setCartOpen] = useState(false);
   
+  // Restaurant browsing state
+  const [showRestaurantList, setShowRestaurantList] = useState(false);
+  const [browsingRestaurantId, setBrowsingRestaurantId] = useState<string | null>(null);
+  
   // Loading state
   const [isSearching, setIsSearching] = useState(false);
 
@@ -158,8 +162,9 @@ const Chat = () => {
       // Start errand flow
       startErrandFlow();
     } else if (action === 'restaurant') {
-      // Partner restaurants - coming soon
-      addBotMessage("🍽️ Partner restaurants coming soon! Use 'Get Job Done' to order from any restaurant in the city.");
+      // Partner restaurants
+      setShowRestaurantList(true);
+      addBotMessage("🍽️ Here are partner restaurants that deliver to you:");
     } else if (action === 'popular') {
       if (isLoadingPopular) {
         setIsSearching(true);
@@ -243,6 +248,26 @@ const Chat = () => {
     setSelectedCategoryId(null);
   }, []);
 
+  // Restaurant selection handlers
+  const handleSelectRestaurant = useCallback((restaurantId: string) => {
+    setShowRestaurantList(false);
+    setBrowsingRestaurantId(restaurantId);
+    addBotMessage("📋 Here's the menu! Add items to your cart:");
+  }, [addBotMessage]);
+
+  const handleCloseRestaurantList = useCallback(() => {
+    setShowRestaurantList(false);
+  }, []);
+
+  const handleBackToRestaurantList = useCallback(() => {
+    setBrowsingRestaurantId(null);
+    setShowRestaurantList(true);
+  }, []);
+
+  const handleCloseRestaurantMenu = useCallback(() => {
+    setBrowsingRestaurantId(null);
+  }, []);
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -287,6 +312,13 @@ const Chat = () => {
         onErrandAddressSelect={handleErrandAddressSelect}
         onSubmitErrand={handleSubmitErrand}
         onEditDetails={handleEditDetails}
+        // Restaurant props
+        showRestaurantList={showRestaurantList}
+        browsingRestaurantId={browsingRestaurantId}
+        onSelectRestaurant={handleSelectRestaurant}
+        onCloseRestaurantList={handleCloseRestaurantList}
+        onBackToRestaurantList={handleBackToRestaurantList}
+        onCloseRestaurantMenu={handleCloseRestaurantMenu}
       />
 
       {/* Input Area (Quick Actions + Cart Preview + Chat Input) */}

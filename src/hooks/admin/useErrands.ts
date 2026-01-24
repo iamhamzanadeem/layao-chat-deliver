@@ -91,6 +91,30 @@ export const useErrands = (options?: UseErrandsOptions) => {
   });
 };
 
+// Fetch errand by order_id (for Orders page integration)
+export const useErrandByOrderId = (orderId: string | undefined) => {
+  return useQuery({
+    queryKey: ['admin-errand-by-order', orderId],
+    queryFn: async () => {
+      if (!orderId) return null;
+
+      const { data, error } = await supabase
+        .from('errand_orders')
+        .select('*')
+        .eq('order_id', orderId)
+        .single();
+
+      if (error) {
+        if (error.code === 'PGRST116') return null;
+        throw error;
+      }
+
+      return data;
+    },
+    enabled: !!orderId,
+  });
+};
+
 export const useErrand = (id: string | undefined) => {
   return useQuery({
     queryKey: ['admin-errand', id],
