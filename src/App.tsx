@@ -58,12 +58,13 @@ const App = () => (
               <Route path="/admin" element={<AdminLayout />}>
                 <Route index element={<Navigate to="/admin/dashboard" replace />} />
                 <Route path="dashboard" element={<Dashboard />} />
-                <Route path="products" element={<Products />} />
-                <Route path="categories" element={<Categories />} />
-                <Route path="orders" element={<Orders />} />
-                <Route path="errands" element={<Errands />} />
-                <Route path="customers" element={<Customers />} />
-                <Route path="analytics" element={<Analytics />} />
+              <Route path="products" element={<Products />} />
+              <Route path="categories" element={<Categories />} />
+              <Route path="orders" element={<Orders />} />
+              <Route path="errands" element={<Errands />} />
+              <Route path="restaurants" element={<PartnerRestaurants />} />
+              <Route path="customers" element={<Customers />} />
+              <Route path="analytics" element={<Analytics />} />
               </Route>
               
               <Route path="*" element={<NotFound />} />

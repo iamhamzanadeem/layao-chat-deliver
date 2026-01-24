@@ -8,6 +8,8 @@ import OrderConfirmation from './OrderConfirmation';
 import ErrandTaskTypeSelector from './ErrandTaskTypeSelector';
 import ErrandDetailsForm from './ErrandDetailsForm';
 import ErrandPriceEstimateComponent from './ErrandPriceEstimate';
+import RestaurantSelector from './RestaurantSelector';
+import RestaurantMenu from './RestaurantMenu';
 import type { ChatMessage } from '@/types/chat';
 import type { CheckoutStep } from '@/hooks/app/useCheckoutFlow';
 import type { ErrandStep } from '@/hooks/app/useErrandFlow';
@@ -37,6 +39,13 @@ interface MessageListProps {
   onErrandAddressSelect: (address: DeliveryAddress) => void;
   onSubmitErrand: () => void;
   onEditDetails: () => void;
+  // Restaurant props
+  showRestaurantList: boolean;
+  browsingRestaurantId: string | null;
+  onSelectRestaurant: (restaurantId: string) => void;
+  onCloseRestaurantList: () => void;
+  onBackToRestaurantList: () => void;
+  onCloseRestaurantMenu: () => void;
 }
 
 const MessageList = ({
@@ -60,6 +69,13 @@ const MessageList = ({
   onErrandAddressSelect,
   onSubmitErrand,
   onEditDetails,
+  // Restaurant props
+  showRestaurantList,
+  browsingRestaurantId,
+  onSelectRestaurant,
+  onCloseRestaurantList,
+  onBackToRestaurantList,
+  onCloseRestaurantMenu,
 }: MessageListProps) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -69,7 +85,7 @@ const MessageList = ({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, checkoutStep, errandStep]);
+  }, [messages, checkoutStep, errandStep, showRestaurantList, browsingRestaurantId]);
 
   const renderCheckoutStep = () => {
     switch (checkoutStep) {
@@ -178,6 +194,37 @@ const MessageList = ({
           className="mt-2"
         >
           {renderErrandStep()}
+        </motion.div>
+      )}
+
+      {/* Restaurant List */}
+      {showRestaurantList && (
+        <motion.div
+          variants={fadeInUp}
+          initial="initial"
+          animate="animate"
+          className="mt-2"
+        >
+          <RestaurantSelector 
+            onSelect={onSelectRestaurant}
+            onClose={onCloseRestaurantList}
+          />
+        </motion.div>
+      )}
+
+      {/* Restaurant Menu */}
+      {browsingRestaurantId && (
+        <motion.div
+          variants={fadeInUp}
+          initial="initial"
+          animate="animate"
+          className="mt-2"
+        >
+          <RestaurantMenu
+            restaurantId={browsingRestaurantId}
+            onBack={onBackToRestaurantList}
+            onClose={onCloseRestaurantMenu}
+          />
         </motion.div>
       )}
       
