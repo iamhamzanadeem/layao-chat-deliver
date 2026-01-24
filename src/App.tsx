@@ -23,6 +23,7 @@ import Products from "./pages/admin/Products";
 import Categories from "./pages/admin/Categories";
 import Orders from "./pages/admin/Orders";
 import Errands from "./pages/admin/Errands";
+import PartnerRestaurants from "./pages/admin/PartnerRestaurants";
 import Customers from "./pages/admin/Customers";
 import Analytics from "./pages/admin/Analytics";
 
