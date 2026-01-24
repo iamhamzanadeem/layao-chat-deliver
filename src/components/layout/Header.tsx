@@ -85,12 +85,6 @@ export const Header = () => {
             <Button asChild variant="ghost" size="sm">
               <Link to="/app">Login</Link>
             </Button>
-            <Button asChild size="sm" className="bg-gradient-primary hover:opacity-90">
-              <Link to="/app" className="flex items-center gap-2">
-                <MessageCircle className="w-4 h-4" />
-                Start Ordering
-              </Link>
-            </Button>
           </div>
 
           {/* Mobile Menu Toggle */}
@@ -143,12 +137,6 @@ export const Header = () => {
                 
                 <Button asChild variant="outline" className="w-full">
                   <Link to="/app">Login</Link>
-                </Button>
-                <Button asChild className="w-full bg-gradient-primary">
-                  <Link to="/app" className="flex items-center justify-center gap-2">
-                    <MessageCircle className="w-4 h-4" />
-                    Start Ordering
-                  </Link>
                 </Button>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { MessageCircle, ArrowRight, Sparkles, Download } from 'lucide-react';
+import { ArrowRight, Sparkles, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 
@@ -52,38 +52,31 @@ export const HeroSection = () => {
             Send a message, and we'll deliver it to your doorstep — fast!
           </motion.p>
 
-          {/* CTA Buttons */}
+          {/* CTA Button */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
             className="flex flex-col sm:flex-row items-center justify-center gap-4"
           >
-            <Button asChild size="lg" className="bg-gradient-primary hover:opacity-90 text-lg px-8 h-14 w-full sm:w-auto">
-              <Link to="/app" className="flex items-center gap-2">
-                <MessageCircle className="w-5 h-5" />
-                Start Ordering Now
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-            </Button>
-            
-            {!isInstalled && (
+            {!isInstalled ? (
               <Button 
                 size="lg" 
-                variant="outline" 
-                className="text-lg px-8 h-14 w-full sm:w-auto border-primary text-primary hover:bg-primary hover:text-primary-foreground"
+                className="bg-gradient-primary hover:opacity-90 text-lg px-8 h-14 w-full sm:w-auto"
                 onClick={promptInstall}
               >
                 <Download className="w-5 h-5 mr-2" />
                 {isIOS ? 'Add to Home Screen' : 'Install App'}
+                <ArrowRight className="w-5 h-5 ml-2" />
+              </Button>
+            ) : (
+              <Button asChild size="lg" className="bg-gradient-primary hover:opacity-90 text-lg px-8 h-14 w-full sm:w-auto">
+                <Link to="/app" className="flex items-center gap-2">
+                  Open App
+                  <ArrowRight className="w-5 h-5" />
+                </Link>
               </Button>
             )}
-            
-            <Button asChild variant="outline" size="lg" className="text-lg px-8 h-14 w-full sm:w-auto">
-              <Link to="/how-it-works">
-                See How It Works
-              </Link>
-            </Button>
           </motion.div>
 
           {/* Trust Indicators */}

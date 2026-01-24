@@ -10,7 +10,6 @@ import HowItWorks from "./pages/HowItWorks";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import FAQs from "./pages/FAQs";
-import Install from "./pages/Install";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/app/Auth";
 import AppLayout from "./components/app/AppLayout";
@@ -44,7 +43,7 @@ const App = () => (
               <Route path="/about" element={<About />} />
               <Route path="/contact" element={<Contact />} />
               <Route path="/faqs" element={<FAQs />} />
-              <Route path="/install" element={<Install />} />
+              
               
               {/* App Routes */}
               <Route path="/app/auth" element={<Auth />} />

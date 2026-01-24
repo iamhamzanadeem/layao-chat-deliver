@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { toast } from 'sonner';
 import { pwaInstall, InstallResult } from '@/lib/pwaInstall';
 
 export const usePWAInstall = () => {
@@ -20,7 +21,17 @@ export const usePWAInstall = () => {
   }, []);
 
   const promptInstall = useCallback(async (): Promise<InstallResult> => {
-    return await pwaInstall.install();
+    const result = await pwaInstall.install();
+    
+    if (result === 'unavailable') {
+      if (pwaInstall.isIOS()) {
+        toast.info('To install on iPhone/iPad, tap the Share button and select "Add to Home Screen"');
+      } else {
+        toast.info('Installation not available. Try opening in Chrome browser.');
+      }
+    }
+    
+    return result;
   }, []);
 
   return {

@@ -8,7 +8,7 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
 }
 
-export type InstallResult = 'installed' | 'dismissed' | 'unavailable' | 'ios-redirect';
+export type InstallResult = 'installed' | 'dismissed' | 'unavailable';
 
 class PWAInstallManager {
   private deferredPrompt: BeforeInstallPromptEvent | null = null;
@@ -92,15 +92,13 @@ class PWAInstallManager {
    * - Otherwise: Redirects to /install page
    */
   async install(): Promise<InstallResult> {
-    // If already installed, do nothing
     if (this.installed) {
       return 'installed';
     }
 
-    // iOS doesn't support beforeinstallprompt - redirect to manual instructions
+    // iOS doesn't support native install - return unavailable
     if (this.isIOS()) {
-      window.location.href = '/install';
-      return 'ios-redirect';
+      return 'unavailable';
     }
 
     // Native prompt available - use it
@@ -119,14 +117,11 @@ class PWAInstallManager {
         return 'dismissed';
       } catch (error) {
         console.error('PWA install prompt failed:', error);
-        // Fallback to install page on error
-        window.location.href = '/install';
         return 'unavailable';
       }
     }
 
-    // No native prompt available - redirect to install instructions
-    window.location.href = '/install';
+    // No native prompt available
     return 'unavailable';
   }
 }
